@@ -1,13 +1,17 @@
-# Every push to main goes straight to http://gginternational.net/roof, because
-# the roof is measured on a tablet and the tablet only ever sees what is live.
-# Nothing is built: the page is plain modules and the browser loads them as they
-# are, so a deploy is a copy.
-name: Deploy
+# Tag it and it goes live. Nothing else deploys — a merge to main is only code
+# that is ready, a tag is code you have decided to put on the roof.
+#
+# Both shapes of tag fire it, so v1.2.0 and 1.2.0 behave the same.
+name: Release
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags:
+      - 'v*'
+      - '[0-9]*'
+
+permissions:
+  contents: write
 
 # One at a time. Two rsyncs into the same folder would interleave.
 concurrency:
@@ -56,3 +60,12 @@ jobs:
             echo "$path -> $code"
             [ "$code" = "200" ] || exit 1
           done
+
+      - name: Note the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            --verify-tag || echo "release already exists, leaving it alone"
