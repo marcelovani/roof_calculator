@@ -425,3 +425,7 @@ button.danger:hover { background: #c0392b; color: #fff; }
   color: #8a3d2f; background: #fdf3f1; border: 1px solid #e6c5bd;
   border-radius: 5px; padding: 10px 12px; max-width: 720px;
 }
+
+/* The prompt and the plan are read, not written: tall enough to take in, and
+   scrolling rather than growing so the buttons under them stay in reach. */
+.ask textarea.long { resize: vertical; max-height: 50vh; }

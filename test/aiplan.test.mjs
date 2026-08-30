@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildPolygon } from '../src/geometry.js';
-import { promptFor, readPlan } from '../src/aiplan.js';
+import { planJson, promptFor, readPlan } from '../src/aiplan.js';
+import { plan } from '../src/nest.js';
 
 const piece = (id) => ({ id, side: 'west', edges: [100, 100, 100, 100], vertices: buildPolygon([100, 100, 100, 100]).vertices });
 const pieces = [piece('1'), piece('2')];
@@ -61,4 +62,12 @@ test('the prompt carries the rules, the sheets and the corners', () => {
   assert.match(text, /No quarter\s+turns and no mirroring/);
   assert.match(text, /big: 210 x 250/);
   assert.match(text, /corners \[0,0\]/);
+});
+
+test('a plan written out is read back as the same arrangement', () => {
+  const nested = plan(pieces, config);
+  const { problems, sheets, cost } = readPlan(planJson(nested), pieces, config);
+  assert.deepEqual(problems, []);
+  assert.equal(sheets.length, nested.sheets.length);
+  assert.equal(cost, nested.cost);
 });
