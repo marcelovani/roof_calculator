@@ -69,7 +69,11 @@ Answer with JSON and nothing else:
   ]}
 ]}
 
-Cheapest total wins. Say nothing else — the answer is read by a machine.`;
+Cheapest total wins. Say nothing else — the answer is read by a machine.
+
+If an arrangement in that same format follows this, it is the one the nester
+already found. Every piece in it is placed legally, so it is a floor and not a
+suggestion: beat it on total price, or return it unchanged if you cannot.`;
 }
 
 /** Convex polygons, so a separating axis settles it. */
@@ -187,7 +191,10 @@ export function planJson(result) {
     pieces: s.placements.flatMap((slot) =>
       slot.block.placements.map((p) => {
         const box = bbox(translate(p.vertices, slot.x, slot.y));
-        return { id: p.piece.id, orientation: p.orientation === 180 ? 180 : 0, x: round(box.minX), y: round(box.minY) };
+        // The two nesters label a half turn differently — 180 in nest.js, 1 in
+        // nest-blf.js — and the drawing only ever asks whether it is turned at
+        // all. So the test here is the same one: truthy, not a particular number.
+        return { id: p.piece.id, orientation: p.orientation ? 180 : 0, x: round(box.minX), y: round(box.minY) };
       }),
     ),
   }));

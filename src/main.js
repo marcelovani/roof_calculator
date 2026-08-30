@@ -460,7 +460,9 @@ function planControls(fast, result = fast) {
             <td class="num">&pound;${r.cost.toFixed(2)}</td>
             <td class="num">${saved > 0.005 ? `&minus;&pound;${saved.toFixed(2)}` : '&mdash;'}</td>
             <td>${r.shrink ? `<span class="tag">${TRIAL(r.shrink)}</span>` : ''}</td>
-            <td class="mix">${esc(r.mix)}</td></tr>`;
+            <td class="mix">${esc(r.mix)}</td>
+            <td><button class="exportrow" data-plan="${esc(r.id)}"
+              title="Draw this one, and take it to the AI tab">Export to AI</button></td></tr>`;
         })
         .join('')}</tbody></table>`
     : '';
@@ -481,7 +483,6 @@ function planControls(fast, result = fast) {
     <button id="optimise">${active ? 'Stop' : rows.length ? 'Optimise more' : 'Optimise'}</button>
     ${state.opt.plan ? '<button id="dropoptimise">Back to the quick plan</button>' : ''}
     ${rows.length ? '<button id="clearsearches">Clear results</button>' : ''}
-    <button id="exportplan" title="Put this arrangement on the AI tab, and on the clipboard">Export to AI</button>
     ${status}
   </div>${list}${trialWarning}`;
 }
@@ -514,17 +515,17 @@ function wireOptimise(nestable, fast) {
     draw();
   });
 
-  // The plan on the screen, in the same JSON a pasted answer comes back as. The
-  // clipboard can refuse — the published copy is plain http — so the AI tab
-  // holds it as well, and that is where the button leaves you.
-  $('#exportplan')?.addEventListener('click', async () => {
+  // A plan in the same JSON a pasted answer comes back as. The clipboard can
+  // refuse — the published copy is plain http — so the AI tab holds it as well,
+  // and that is where the button leaves you.
+  const exportPlan = async (plan) => {
     try {
-      await navigator.clipboard.writeText(planJson(opt.plan || fast));
+      await navigator.clipboard.writeText(planJson(plan));
     } catch {
       /* no clipboard here; the box on the AI tab is the fallback */
     }
     showTab('ai');
-  });
+  };
 
   $('#dropoptimise')?.addEventListener('click', () => {
     opt.plan = null;
@@ -541,15 +542,31 @@ function wireOptimise(nestable, fast) {
   };
 
   for (const el of document.querySelectorAll('#cutplan tr[data-plan]')) {
-    const pick = () => {
+    const choose = () => {
       const row = offers().find((r) => r.id === el.dataset.plan);
-      if (!row) return;
+      if (!row) return null;
       opt.pinned = true;
       show(row);
-      draw();
+      return opt.plan;
     };
+    const pick = () => {
+      if (choose()) draw();
+    };
+    // Exporting a row draws it as well: what leaves for the model and what is
+    // on the screen being two different plans is the one confusion worth ruling
+    // out. The row's own handler would do it anyway, but by then the table has
+    // been redrawn and this button is gone, so it is done here instead.
+    el.querySelector('.exportrow')?.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      const plan = choose();
+      draw();
+      if (plan) await exportPlan(plan);
+    });
     el.addEventListener('click', pick);
     el.addEventListener('keydown', (event) => {
+      // The button inside the row does its own thing on Enter; without this the
+      // row would pick the plan a second time on the way up.
+      if (event.target.closest('.exportrow')) return;
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
         pick();
