@@ -66,7 +66,9 @@ test('pairing and half turns preserve the glazed area', () => {
 test('pairing actually happens on a roof of trapezoids and triangles', () => {
   const paired = result.blocks.filter((b) => b.placements.length > 1);
   assert.ok(paired.length > 0, 'nothing paired');
-  assert.ok(paired.every((b) => b.placements.some((p) => p.orientation === 180)));
+  // Some, not every: a merge that saves area without a turn is a good merge
+  // too, and the worked example has one — three pieces stacked upright.
+  assert.ok(paired.some((b) => b.placements.some((p) => p.orientation === 180)), 'no half turn used');
 });
 
 test('a piece too big for any sheet does not take the rest of the roof with it', () => {

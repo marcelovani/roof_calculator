@@ -4,7 +4,7 @@
  * patching nodes.
  */
 
-import { area, asDrawn, bbox, buildRelaxed, fitPolygon, isPlain, normalise, orient, squareCorners, widthGuide } from './geometry.js';
+import { area, bbox, buildRelaxed, fitPolygon, isPlain, normalise, orient, squareCorners, widthGuide } from './geometry.js';
 import { SIDE_ORDER, layoutRoof } from './roof.js';
 
 export const SIDE_COLOURS = {
@@ -144,17 +144,16 @@ export function renderPieces(pieces, problems, units, showFitted = false) {
 }
 
 /**
- * Measured lengths, or the fitted ones with whatever changed marked — in the
- * order the drawing walks its corners, so each number lands on its own edge.
+ * Measured lengths, or the fitted ones with whatever changed marked. The order
+ * they are entered in is the order the drawing walks its corners, so each
+ * number already lands on its own edge.
  */
 function edgeValues(piece, showFitted) {
   const shown = showFitted && piece.fitted ? piece.fitted : piece.edges;
-  return asDrawn(
-    shown.map((value, i) => ({
-      value: Number(value),
-      changed: !!piece.fitted && Math.abs(Number(piece.edges[i]) - piece.fitted[i]) > 0.05,
-    }))
-  );
+  return shown.map((value, i) => ({
+    value: Number(value),
+    changed: !!piece.fitted && Math.abs(Number(piece.edges[i]) - piece.fitted[i]) > 0.05,
+  }));
 }
 
 const MODEL_NOTE = {
@@ -658,7 +657,7 @@ export function renderPiecePreview(edges, side, units, how) {
           <polygon points="${points(v, scale, bb.height * scale)}" fill="${colour}22" stroke="${colour}" stroke-width="1.5"/>
           ${guideLine(guide, scale, bb.height * scale)}
           ${rightAngles(v, scale, bb.height * scale)}
-          ${edgeLabels(v, asDrawn(edges.map((value) => ({ value: Number(value), changed: false }))), scale, bb.height * scale)}
+          ${edgeLabels(v, edges.map((value) => ({ value: Number(value), changed: false })), scale, bb.height * scale)}
         </g>
       </svg>
     </figure>
