@@ -61,18 +61,37 @@ button.primary:hover { filter: brightness(1.08); }
 
 main { flex: 1; padding: 20px 24px 60px; overflow-x: auto; }
 
+/* The toolbar, grouped: what you can look at, what you can do, the settings.
+   Buttons inside a group butt up against each other and the groups are held
+   apart by a divider — the drawing-program idiom, and it reads as three things
+   rather than eleven. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin-bottom: 18px; }
+.toolbar .group { display: flex; align-items: center; }
+.toolbar .group + .group { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--line); }
+.toolbar svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
-.tabs button {
-  padding: 7px 15px; border: 1px solid var(--line); border-radius: 5px;
+.tabs button, .toolbar button, .plan-controls button {
+  padding: 7px 12px; border: 1px solid var(--line); border-radius: 5px;
   background: var(--panel); font-size: 13px; cursor: pointer; color: var(--muted);
 }
-.tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+/* Within a group they are one control, so only the ends are rounded. */
+.toolbar button { display: inline-flex; align-items: center; gap: 6px; border-radius: 0; margin-left: -1px; }
+.toolbar .group button:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
+.toolbar .group button:last-child { border-radius: 0 5px 5px 0; }
+.toolbar .group button:only-child { border-radius: 5px; }
+.toolbar button:hover, .plan-controls button:hover { color: var(--ink); background: #f2f1ee; }
+.toolbar button.active, .tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; position: relative; z-index: 1; }
 /* Folded away the sidebar is 290px of the tablet back, which is most of a piece. */
 .tabs .collapse { font-size: 16px; line-height: 1; padding: 7px 12px; }
 body.sidebar-off .sidebar { display: none; }
 @media (pointer: coarse) {
-  .tabs button { padding: 12px 16px; font-size: 15px; }
-  .tabs .collapse { font-size: 20px; padding: 10px 16px; }
+  .tabs button, .toolbar button, .plan-controls button { padding: 12px 14px; font-size: 15px; }
+  .toolbar svg { width: 18px; height: 18px; }
+}
+/* No room for the words on a phone; the icons and the tooltips carry it. */
+@media (max-width: 700px) {
+  .toolbar button span { display: none; }
+  .toolbar button { padding: 10px 12px; }
 }
 
 .side-group { margin-bottom: 30px; }
@@ -126,7 +145,7 @@ table.order tfoot td { font-weight: 600; border-bottom: none; background: #faf9f
  * hidden, and everything you would only click disappears.
  */
 @media print {
-  .sidebar, .tabs, .plan-controls, table.offers, .ask-buttons, textarea, details,
+  .sidebar, .tabs, .toolbar, .plan-controls, table.offers, .ask-buttons, textarea, details,
   .piece-card .edges, #warnings button { display: none !important; }
   body { display: block; background: #fff; }
   main { padding: 0; }
@@ -287,3 +306,100 @@ table.offers .tag { background: #a8402c; color: #fff; border-radius: 3px; paddin
 
 .tabs .print { margin-left: auto; }
 .materials h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }
+
+
+/* The sheet catalogue: seven widths, each with its lengths under it. */
+.sheet-manager { max-width: 720px; }
+.sheet-tools { display: flex; gap: 8px; margin-bottom: 4px; }
+.sheet-tools button { width: auto; }
+.sheet-group { margin-bottom: 22px; }
+.sheet-group h2 {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+  margin: 0 0 8px; display: flex; align-items: baseline; gap: 8px;
+}
+.sheet-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sheet-list li { display: flex; align-items: stretch; gap: 4px; }
+.sheet-row {
+  flex: 1; display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel);
+  font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+}
+.sheet-row:hover { border-color: var(--accent); }
+.sheet-row .size { color: var(--muted); font-variant-numeric: tabular-nums; }
+.sheet-row .price { font-weight: 600; font-variant-numeric: tabular-nums; }
+.sheet-link {
+  display: flex; align-items: center; padding: 0 10px; border: 1px solid var(--line);
+  border-radius: 5px; text-decoration: none; color: var(--muted); background: var(--panel);
+}
+.sheet-link:hover { color: var(--accent); border-color: var(--accent); }
+
+/* A dialog full of fields rather than measurements. */
+.fields { display: flex; flex-direction: column; gap: 8px; }
+.fields label { display: grid; grid-template-columns: 68px 1fr; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.fields input {
+  padding: 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel);
+  color: var(--ink); font: inherit;
+}
+.fields input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+button.danger { border-color: #c0392b; color: #c0392b; background: var(--panel); }
+button.danger:hover { background: #c0392b; color: #fff; }
+@media (pointer: coarse) {
+  .sheet-row { padding: 14px 12px; }
+  .fields input { padding: 12px; font-size: 16px; }
+}
+
+
+/* Which sizes the plan may cut from. Folded away; the count is the headline. */
+.sheet-picker {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 12px; margin-bottom: 12px; max-width: 720px;
+}
+.sheet-picker summary { cursor: pointer; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.sheet-picker summary .muted { text-transform: none; letter-spacing: 0; }
+.pick-groups { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.pick-group { display: grid; grid-template-columns: 86px 1fr; gap: 10px; align-items: start; }
+.pick-width { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.pick-lengths { display: flex; flex-wrap: wrap; gap: 4px; }
+.pick {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px;
+  border: 1px solid var(--line); border-radius: 4px; font-size: 12px; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.pick:has(input:checked) { border-color: var(--accent); color: var(--accent); }
+.pick-actions { display: flex; gap: 6px; margin-top: 12px; }
+.pick-actions button {
+  padding: 5px 12px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--panel); color: var(--ink); font-size: 12px; cursor: pointer;
+}
+@media (pointer: coarse) {
+  .pick { padding: 9px 12px; font-size: 14px; }
+  .pick-actions button { padding: 10px 16px; font-size: 14px; }
+}
+
+
+/* The designs kept in this browser. */
+.designs { max-width: 720px; }
+.design-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.design-row {
+  width: 100%; display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center;
+  padding: 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel);
+  font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+}
+.design-row:hover { border-color: var(--accent); }
+.design-row.open { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.design-row .name { font-weight: 600; }
+.design-row .tag { background: var(--accent); color: #fff; border-radius: 3px; padding: 2px 7px; font-size: 11px; }
+.checks { display: flex; flex-direction: column; gap: 10px; }
+.checks label { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; font-size: 13px; }
+.checks input { margin-top: 3px; }
+@media (pointer: coarse) {
+  .design-row { padding: 16px 12px; }
+  .checks label { font-size: 15px; }
+}
+
+
+/* Said where it matters: a plan that leaves pieces out is not a cheaper plan. */
+.hint.bad {
+  color: #8a3d2f; background: #fdf3f1; border: 1px solid #e6c5bd;
+  border-radius: 5px; padding: 10px 12px; max-width: 720px;
+}

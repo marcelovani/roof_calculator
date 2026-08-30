@@ -27,8 +27,9 @@
     <aside class="sidebar" id="sidebar">
       <h1>Roof Cut Planner</h1>
       <p class="hint">
-        16&nbsp;mm multiwall polycarbonate. Flutes run down the slope, so pieces are
-        placed as-is or turned a half turn (&#8635;) — never a quarter turn, never mirrored.
+        16&nbsp;mm multiwall polycarbonate. Flutes run down the slope, so pieces
+        are placed as-is or turned a half turn (&#8635;) — never a quarter turn,
+        never mirrored.
       </p>
 
       <section>
@@ -42,27 +43,26 @@
         <h2>Data</h2>
         <p class="hint">
           Sheet prices are Axiome Clear 16&nbsp;mm from
-          <a href="https://clearambershop.com/products/axiome-clear-16mm-multiwall-polycarbonate-roofing-sheet">clearambershop</a>,
-          read 28 Aug 2026, inc VAT. Every size is &pound;20.20/m&sup2;, so offcut costs the same whatever you buy.
+          <a
+            href="https://clearambershop.com/products/axiome-clear-16mm-multiwall-polycarbonate-roofing-sheet"
+            >clearambershop</a
+          >, read 28 Aug 2026, inc VAT. Every size is &pound;20.20/m&sup2;, so
+          offcut costs the same whatever you buy — and the Sheets tab is where
+          you change a price or add a size the shop has started stocking.
         </p>
         <p class="hint">
-          Type the measurements into the boxes under each piece and they save to
-          <code>data/cuts.json</code> as you leave the box — or edit the file, and the
-          drawing follows within a second. Saving to the file needs
-          <code>node serve.mjs</code>; anywhere else the measurements are kept in this
-          browser instead, and loaded back ahead of the file next time — &ldquo;Use the
-          file again&rdquo; throws that copy away.
-          A <b>green</b> border means the lengths close into a real piece, <b>red</b> that they
-          do not and the drawing is the nearest that does.
-          <b>All values are in cm</b>. Edges go clockwise from the
-          bottom-left corner and numbered from there: <code>[side 1, side 2, side 3, side 4]</code>
-          for 4 sides, <code>[side 1, side 2, side 3]</code> for 3. The last one is always the
-          base — the edge that sits on the eave.
+          Type the measurements into the boxes under each piece. Everything is
+          kept in this browser, so <b>Export</b> is how work leaves it and
+          <b>Import</b> is how it comes back. <code>data/cuts.json</code> and
+          <code>data/sheets.json</code> are the starting point and what Reset
+          goes back to. A <b>green</b> border means the lengths close into a
+          real piece, <b>red</b> that they do not and the drawing is the nearest
+          that does. <b>All values are in cm</b>. Edges go clockwise from the
+          bottom-left corner and numbered from there:
+          <code>[side 1, side 2, side 3, side 4]</code> for 4 sides,
+          <code>[side 1, side 2, side 3]</code> for 3. The last one is always
+          the base — the edge that sits on the eave.
         </p>
-        <button id="reload" class="primary">Redraw now</button>
-        <button id="forgetlocal">Reset to the file</button>
-        <button id="export">Export</button>
-        <button id="import">Import</button>
         <p class="hint" id="status"></p>
         <p class="hint">
           <a href="?">your roof</a> &middot;
@@ -72,18 +72,135 @@
     </aside>
 
     <main>
-      <nav class="tabs">
-        <button id="sidebar-toggle" class="collapse" aria-controls="sidebar" aria-expanded="true"
-                title="Hide the sidebar">&#9776;</button>
-        <button data-tab="pieces">Pieces</button>
-        <button data-tab="roof">Roof</button>
-        <button data-tab="cutplan">Cut plan</button>
-        <button data-tab="ai">Ask a model</button>
-        <button id="print" class="print">Print this tab</button>
+      <!-- Grouped the way a drawing program groups them: what you can look at,
+           what you can do with it, and the settings. Icon and word together —
+           a tablet is used with a thumb and by someone who is up a ladder. -->
+      <nav class="toolbar">
+        <div class="group">
+          <button
+            id="sidebar-toggle"
+            class="collapse"
+            aria-controls="sidebar"
+            aria-expanded="true"
+            title="Hide the sidebar"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2 4h12M2 8h12M2 12h12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="group" role="group" aria-label="View">
+          <button data-tab="roof" title="The roof from above">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M1 7l7-5 7 5" />
+              <path d="M3 7v7h10V7" />
+            </svg>
+            <span>Roof</span>
+          </button>
+          <button data-tab="pieces" title="Every piece, measured">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <rect x="2" y="2" width="5" height="5" />
+              <rect x="9" y="2" width="5" height="5" />
+              <rect x="2" y="9" width="5" height="5" />
+              <rect x="9" y="9" width="5" height="5" />
+            </svg>
+            <span>Pieces</span>
+          </button>
+          <button data-tab="sheets" title="The sizes you can buy">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2 4h12M2 8h12M2 12h7" />
+            </svg>
+            <span>Sheets</span>
+          </button>
+          <button data-tab="cutplan" title="What to cut from which sheet">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <rect x="2" y="2" width="12" height="12" />
+              <path d="M6 2v12M2 9h4" />
+            </svg>
+            <span>Cut plan</span>
+          </button>
+          <button data-tab="designs" title="Your saved designs">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M2 12V4a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"
+              />
+            </svg>
+            <span>Designs</span>
+          </button>
+          <button data-tab="ai" title="Hand the pieces to a model">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M14 10a2 2 0 0 1-2 2H6l-4 3V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"
+              />
+            </svg>
+            <span>Ask</span>
+          </button>
+        </div>
+
+        <div class="group" role="group" aria-label="File">
+          <button id="reload" title="Read the files again and redraw">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M14 8a6 6 0 1 1-1.8-4.3" />
+              <path d="M14 2v4h-4" />
+            </svg>
+            <span>Redraw</span>
+          </button>
+          <button id="saveas" title="Keep a copy of this roof under a new name">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M13 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7l4 4v7a1 1 0 0 1-1 1z"
+              />
+              <path d="M5 2v4h5" />
+              <path d="M8 9v3M6.5 10.5h3" />
+            </svg>
+            <span>Save as</span>
+          </button>
+          <button id="export" title="Copy the measurements out">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 11V2" />
+              <path d="M5 5l3-3 3 3" />
+              <path d="M2 11v3h12v-3" />
+            </svg>
+            <span>Export</span>
+          </button>
+          <button id="import" title="Paste measurements back in">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 2v9" />
+              <path d="M5 8l3 3 3-3" />
+              <path d="M2 11v3h12v-3" />
+            </svg>
+            <span>Import</span>
+          </button>
+          <button
+            id="print"
+            class="print"
+            title="Print the tab you are looking at"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M4 6V2h8v4" />
+              <path d="M4 12H2V6h12v6h-2" />
+              <rect x="4" y="10" width="8" height="4" />
+            </svg>
+            <span>Print</span>
+          </button>
+        </div>
+
+        <div class="group" role="group" aria-label="Settings">
+          <button id="forgetlocal" title="Start again from the shipped files">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2 8a6 6 0 1 0 1.8-4.3" />
+              <path d="M2 2v4h4" />
+            </svg>
+            <span>Reset</span>
+          </button>
+        </div>
       </nav>
       <div id="pieces" class="panel"></div>
       <div id="roof" class="panel"></div>
       <div id="cutplan" class="panel sheets"></div>
+      <div id="sheets" class="panel"></div>
+      <div id="designs" class="panel"></div>
       <div id="ai" class="panel"></div>
     </main>
 
@@ -94,7 +211,9 @@
         <div id="editor-body"></div>
         <div class="editor-buttons">
           <button value="ok" class="primary">OK</button>
-          <button id="editor-close" value="cancel" formnovalidate autofocus>Close</button>
+          <button id="editor-close" value="cancel" formnovalidate autofocus>
+            Close
+          </button>
         </div>
       </form>
     </dialog>
@@ -103,13 +222,139 @@
          can only keep them in its browser and the machine with the file on it.
          What comes out is data/cuts.json exactly as it is written, so it can be
          pasted over the file by hand. -->
+    <!-- One sheet size. The id is not shown: it is what the cut-plan selection
+         points at, so it is made once and never edited. -->
+    <!-- One design. Open is the everyday action, so it leads. -->
+    <dialog id="designeditor">
+      <form method="dialog">
+        <h2 id="design-title">Design</h2>
+        <div class="fields">
+          <label
+            ><span>Name</span><input id="design-name" autocomplete="off"
+          /></label>
+        </div>
+        <p class="hint" id="design-status"></p>
+        <div class="editor-buttons">
+          <button type="button" id="design-open" class="primary">Open</button>
+          <button type="button" id="design-rename">Rename</button>
+          <button type="button" id="design-delete" class="danger">
+            Delete
+          </button>
+          <button value="cancel" formnovalidate autofocus>Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Reset is four separate things, and doing all four is rarely what is
+         wanted. A box each, none of them ticked to begin with. -->
+    <dialog id="resetter">
+      <form method="dialog">
+        <h2>Reset</h2>
+        <p class="hint">Nothing happens to anything you leave unticked.</p>
+        <div class="checks">
+          <label
+            ><input type="checkbox" id="reset-cuts" />
+            <span
+              ><b>Measurements</b> — read <code>data/cuts.json</code> again into
+              the design that is open</span
+            ></label
+          >
+          <label
+            ><input type="checkbox" id="reset-sheets" />
+            <span
+              ><b>Sheet sizes</b> — back to <code>data/sheets.json</code>,
+              losing any price you have changed</span
+            ></label
+          >
+          <label
+            ><input type="checkbox" id="reset-settings" />
+            <span
+              ><b>Settings</b> — hidden sides, the sizes ticked for the plan,
+              which tab you were on</span
+            ></label
+          >
+          <label
+            ><input type="checkbox" id="reset-designs" />
+            <span
+              ><b>Designs</b> — delete every saved design, including the one
+              that is open</span
+            ></label
+          >
+        </div>
+        <p class="hint" id="reset-status"></p>
+        <div class="editor-buttons">
+          <button type="button" id="reset-go" class="danger">Reset</button>
+          <button value="cancel" formnovalidate autofocus>Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="sheeteditor">
+      <form method="dialog">
+        <h2 id="sheet-title">Sheet size</h2>
+        <div class="fields">
+          <label
+            ><span>Name</span>
+            <input id="sheet-label" autocomplete="off" placeholder="690x2500mm"
+          /></label>
+          <label
+            ><span>Width</span>
+            <input
+              id="sheet-width"
+              type="number"
+              inputmode="decimal"
+              step="0.1"
+              min="0"
+          /></label>
+          <label
+            ><span>Length</span>
+            <input
+              id="sheet-length"
+              type="number"
+              inputmode="decimal"
+              step="0.1"
+              min="0"
+          /></label>
+          <label
+            ><span>Price</span>
+            <input
+              id="sheet-price"
+              type="number"
+              inputmode="decimal"
+              step="0.01"
+              min="0"
+          /></label>
+          <label
+            ><span>Link</span>
+            <input
+              id="sheet-url"
+              type="url"
+              autocomplete="off"
+              placeholder="optional — the shop page"
+          /></label>
+        </div>
+        <p class="hint" id="sheet-status"></p>
+        <div class="editor-buttons">
+          <button type="button" id="sheet-save" class="primary">Save</button>
+          <button type="button" id="sheet-delete" class="danger">Delete</button>
+          <button value="cancel" formnovalidate autofocus>Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="exporter">
       <form method="dialog">
         <h2>Export</h2>
         <p class="hint">
-          <code>data/cuts.json</code> as it stands here, ready to paste over the file.
+          <code>data/cuts.json</code> as it stands here, ready to paste over the
+          file.
         </p>
-        <textarea id="export-text" readonly rows="10" spellcheck="false"></textarea>
+        <textarea
+          id="export-text"
+          readonly
+          rows="10"
+          spellcheck="false"
+        ></textarea>
         <p class="hint" id="export-status"></p>
         <div class="editor-buttons">
           <button type="button" id="export-copy" class="primary">Copy</button>
@@ -123,11 +368,18 @@
       <form method="dialog">
         <h2>Import</h2>
         <p class="hint">
-          Paste a whole <code>cuts.json</code>. It replaces every measurement, and is
-          written to the file where the page can write it and kept in this browser where it cannot.
+          Paste a whole <code>cuts.json</code>. It replaces every measurement,
+          and is written to the file where the page can write it and kept in
+          this browser where it cannot.
         </p>
-        <textarea id="import-text" rows="10" spellcheck="false" autocapitalize="off"
-                  autocorrect="off" placeholder="{ &quot;note&quot;: …, &quot;cuts&quot;: { … } }"></textarea>
+        <textarea
+          id="import-text"
+          rows="10"
+          spellcheck="false"
+          autocapitalize="off"
+          autocorrect="off"
+          placeholder='{ "note": …, "cuts": { … } }'
+        ></textarea>
         <p class="hint" id="import-status"></p>
         <div class="editor-buttons">
           <button type="button" id="import-go" class="primary">Import</button>
