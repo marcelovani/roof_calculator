@@ -72,7 +72,11 @@ Rules, all of them hard:
 - A piece may be placed as it is, or turned a half turn (180 degrees). No quarter
   turns and no mirroring: the flutes must run along the length of the sheet and
   the UV face must stay up.
-- Pieces may not overlap and may not cross the edge of a sheet.
+- Pieces may not overlap. They may butt straight up against each other: the saw
+  cut is not worth planning around, it comes out of the tolerance below.
+- Along the sheet, no piece may cross the end. The length is the length.
+- Across the sheet you have ${config.allowance || 0} cm more than the sheet says. So a 210 wide
+  sheet takes three pieces 70 wide, and takes 70 + 70 + 71 as well.
 ${config.margin ? `- Leave ${config.margin} cm unused at the sheet edge.\n` : ''}- Every piece must be placed exactly once.
 - Sheets may be used more than once; you pay for each one you use.
 
@@ -142,6 +146,7 @@ export function readPlan(text, pieces, config) {
   const catalogue = new Map((config.sheets || []).map((s) => [String(s.id), s]));
   const byId = new Map(pieces.filter((p) => p.vertices).map((p) => [String(p.id), p]));
   const margin = Number(config.margin) || 0;
+  const allowance = Number(config.allowance) || 0;
   const placedIds = [];
   const sheets = [];
 
@@ -165,7 +170,9 @@ export function readPlan(text, pieces, config) {
       const shape = turned ? rotate180(piece.vertices) : normalise(piece.vertices);
       const vertices = translate(shape, Number(spot.x) || 0, Number(spot.y) || 0);
       const box = bbox(vertices);
-      if (box.minX < margin - 0.05 || box.minY < margin - 0.05 || box.maxX > sheet.width - margin + 0.05 || box.maxY > sheet.length - margin + 0.05) {
+      // The same tolerance the nesters pack to: a centimetre across the sheet,
+      // nothing along it.
+      if (box.minX < margin - 0.05 || box.minY < margin - 0.05 || box.maxX > sheet.width - margin + allowance + 0.05 || box.maxY > sheet.length - margin + 0.05) {
         problems.push(`Piece ${spot.id} hangs off sheet ${index + 1} (${sheet.id}).`);
       }
       placedIds.push(String(piece.id));

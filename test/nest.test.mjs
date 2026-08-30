@@ -24,14 +24,15 @@ test('every piece is placed exactly once', () => {
   assert.equal(result.leftovers.length, 0);
 });
 
-test('no piece sticks out of its sheet', () => {
+test('no piece sticks out of its sheet, bar the allowance across it', () => {
+  const allowance = Number(data.allowance) || 0;
   for (const [i, sheet] of result.sheets.entries()) {
     for (const p of sheet.placements) {
       for (const pl of p.block.placements) {
         const bb = bbox(pl.vertices);
         const where = `sheet ${i + 1}, piece ${pl.piece.id}`;
         assert.ok(p.x + bb.minX >= -1e-6, `${where} off the left edge`);
-        assert.ok(p.x + bb.maxX <= sheet.sheet.width + 1e-6, `${where} off the right edge`);
+        assert.ok(p.x + bb.maxX <= sheet.sheet.width + allowance + 1e-6, `${where} off the right edge`);
         assert.ok(p.y + bb.minY >= -1e-6, `${where} off the bottom edge`);
         assert.ok(p.y + bb.maxY <= sheet.sheet.length + 1e-6, `${where} off the top edge`);
       }
@@ -78,4 +79,18 @@ test('a piece too big for any sheet does not take the rest of the roof with it',
   assert.equal(withOversized.leftovers.length, 1);
   assert.equal(withOversized.leftovers[0].placements[0].piece.id, 'huge');
   assert.equal(new Set(ids).size, pieces.length);
+});
+
+test('the allowance is across the sheet only, never along it', () => {
+  const slab = (id, w, h) => ({ id, side: 'north', edges: [h, w, h, w], vertices: buildPolygon([h, w, h, w]).vertices });
+  const only = { units: 'cm', kerf: 0, margin: 0, allowance: 1, sheets: [{ id: 's', width: 210, length: 250, price: 100 }] };
+
+  // Three 70s make 210 exactly, and 70 + 70 + 71 is the centimetre over.
+  const across = plan([slab('a', 70, 100), slab('b', 70, 100), slab('c', 71, 100)], only);
+  assert.equal(across.leftovers.length, 0);
+  assert.equal(across.sheets.length, 1);
+
+  // The same centimetre along the sheet buys nothing: 251 does not go into 250.
+  const along = plan([slab('d', 100, 251)], only);
+  assert.equal(along.leftovers.length, 1);
 });
