@@ -432,3 +432,7 @@ button.danger:hover { background: #c0392b; color: #fff; }
 
 /* Small enough to sit in a row without setting the row's height. */
 table.offers .exportrow { font-size: 11px; padding: 3px 7px; white-space: nowrap; }
+
+/* The token a box fills, as the prompt spells it. */
+.ask h3 { margin: 18px 0 4px; font-size: 13px; }
+.ask h3 code { font-family: ui-monospace, Menlo, monospace; background: #eceae5; padding: 1px 5px; border-radius: 3px; }

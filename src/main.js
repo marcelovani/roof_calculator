@@ -1,7 +1,7 @@
 import { OPS, area, buildRelaxed, compose, fitPolygon, isPlain, orient } from './geometry.js';
 import { plan } from './nest.js';
 import { createSearch, shrinkPieces } from './nest-blf.js';
-import { planJson, promptFor, readPlan } from './aiplan.js';
+import { fillPrompt, pieceList, planJson, promptTemplate, readPlan, sheetList } from './aiplan.js';
 import * as store from './store.js';
 import { EDGE_NAMES, renderCutPlan, renderOrder, renderPieceEditor, renderPiecePreview, renderPieces, renderDesigns, renderRoof, renderSheetPicker, renderSheets, sqm } from './render.js';
 
@@ -658,16 +658,30 @@ function drawAsk(pieces, ours) {
     <h2>1. Give a model the pieces</h2>
     <p class="hint">${drawable} pieces, ${(data.sheets || []).length} sheet sizes, the rules the nester works
       under. Paste it into Claude, or anything else, and ask for the arrangement.</p>
-    <textarea id="prompt" class="long" rows="14" spellcheck="false" readonly>${escapeHtml(promptFor(pieces, data))}</textarea>
-    <div class="ask-buttons"><button id="copyprompt">Copy the prompt</button></div>
+    <textarea id="prompt" class="long" rows="16" spellcheck="false" readonly>${escapeHtml(promptTemplate(data))}</textarea>
+    <div class="ask-buttons"><button id="copyprompt">Copy the prompt, filled in</button></div>
+    <p class="hint">Copy takes the three boxes below and puts each one where the prompt names it, so
+      what reaches the clipboard is the whole thing. The boxes are here to be read one at a time,
+      and to be copied one at a time when a model would rather be handed them separately.</p>
 
-    <h2>2. And the plan you have now, if you want it beaten</h2>
+    <h3><code>[sheets]</code></h3>
+    <p class="hint">The catalogue, as ticked on the cut plan.</p>
+    <textarea id="sheetlist" class="long" rows="8" spellcheck="false" readonly>${escapeHtml(sheetList(data))}</textarea>
+    <div class="ask-buttons"><button id="copysheets">Copy the sheets</button></div>
+
+    <h3><code>[pieces]</code></h3>
+    <p class="hint">Every measured piece, with its corners.</p>
+    <textarea id="piecelist" class="long" rows="8" spellcheck="false" readonly>${escapeHtml(pieceList(pieces))}</textarea>
+    <div class="ask-buttons"><button id="copypieces">Copy the pieces</button></div>
+
+    <h2>2. <code>[plan]</code> — the plan you have now, if you want it beaten</h2>
     <p class="hint">The arrangement on the cut plan, in the same JSON an answer comes back as${
       shrunk ? `, <b>but drawn from pieces ${fmt1(shrunk)} cm smaller than you measured</b>` : ''} —
       hand it over with the prompt and ask for fewer sheets than this. Leave it out and the model starts from nothing.
       This box follows whichever plan is chosen on the cut plan, so it cannot go stale;
-      Export to AI over there copies it and brings you here.</p>
-    <textarea id="planout" class="long" rows="10" spellcheck="false" readonly>${escapeHtml(planJson(ours))}</textarea>
+      Export to AI over there copies it and brings you here. Clear it and the prompt goes out
+      with no floor to beat.</p>
+    <textarea id="planout" class="long" rows="10" spellcheck="false">${escapeHtml(planJson(ours))}</textarea>
     <div class="ask-buttons"><button id="copyplan">Copy the plan</button></div>
 
     <h2>3. Paste what comes back</h2>
@@ -680,19 +694,38 @@ function drawAsk(pieces, ours) {
   </section>
   ${state.pasted && mine.sheets.length ? `<div class="sheets">${renderCutPlan(mine, data)}</div>${materials(mine, data)}` : ''}`;
 
-  const copyBox = async (id, event) => {
-    const box = $(`#${id}`);
+  const copy = async (text, event) => {
     try {
-      await navigator.clipboard.writeText(box.value);
+      await navigator.clipboard.writeText(text);
     } catch {
       // Plain http has no clipboard API, so fall back to selecting the text.
+      const box = $('#clipboard-fallback') || Object.assign(document.createElement('textarea'), { id: 'clipboard-fallback' });
+      box.style.position = 'fixed';
+      box.style.opacity = '0';
+      document.body.appendChild(box);
+      box.value = text;
       box.select();
       document.execCommand('copy');
+      box.remove();
     }
     event.target.textContent = 'Copied';
   };
-  $('#copyprompt').addEventListener('click', (event) => copyBox('prompt', event));
-  $('#copyplan').addEventListener('click', (event) => copyBox('planout', event));
+  // The prompt goes out whole: each box put back where the prompt names it. The
+  // values are read off the page rather than rebuilt, so what is copied is what
+  // can be seen — the plan box in particular, which can be emptied by hand.
+  $('#copyprompt').addEventListener('click', (event) =>
+    copy(
+      fillPrompt($('#prompt').value, {
+        sheets: $('#sheetlist').value,
+        pieces: $('#piecelist').value,
+        plan: $('#planout').value.trim(),
+      }).trimEnd(),
+      event,
+    ),
+  );
+  $('#copysheets').addEventListener('click', (event) => copy($('#sheetlist').value, event));
+  $('#copypieces').addEventListener('click', (event) => copy($('#piecelist').value, event));
+  $('#copyplan').addEventListener('click', (event) => copy($('#planout').value, event));
   $('#pasted').addEventListener('input', (event) => {
     state.draft = event.target.value;
     setSetting('pastedDraft', state.draft);
