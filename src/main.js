@@ -2,7 +2,8 @@ import { OPS, area, buildRelaxed, compose, fitPolygon, isPlain, orient } from '.
 import { plan } from './nest.js';
 import { createSearch } from './nest-blf.js';
 import { promptFor, readPlan } from './aiplan.js';
-import { EDGE_NAMES, renderCutPlan, renderOrder, renderPieceEditor, renderPiecePreview, renderPieces, renderRoof, sqm } from './render.js';
+import * as store from './store.js';
+import { EDGE_NAMES, renderCutPlan, renderOrder, renderPieceEditor, renderPiecePreview, renderPieces, renderDesigns, renderRoof, renderSheetPicker, renderSheets, sqm } from './render.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -11,7 +12,7 @@ const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 const SIDE_ORDER = ['west', 'south', 'east', 'north'];
 
-const state = { data: null, raw: {}, showFitted: false, hiddenSides: new Set(), flags: new Set(), stepTimer: null, pieces: [], pasted: '', draft: '', editing: null,
+const state = { store: null, defaults: null, data: null, sheet: null, design: null, showFitted: false, hiddenSides: new Set(), flags: new Set(), stepTimer: null, pieces: [], pasted: '', draft: '', editing: null,
   // The slow nester's plan, and the measurements it was made from. Kept apart
   // from the fast one so a keystroke never waits on a search.
   // Every search run on the current measurements, everything they found, and
@@ -19,19 +20,21 @@ const state = { data: null, raw: {}, showFitted: false, hiddenSides: new Set(), 
   // never waits on a search.
   opt: { sig: '', searches: [], active: null, chosen: null, plan: null, pinned: false, timer: null, reduce: 0 } };
 
-// What is drawn, and what is merely typed. Keeping them apart means a refresh
-// mid-paste loses nothing, without the half-typed text being checked as if it
-// had been submitted.
-const PASTED_KEY = 'roof.pastedPlan';
-const DRAFT_KEY = 'roof.pastedDraft';
-const HIDDEN_KEY = 'roof.hiddenSides';
-const remember = (key, value) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* storage off; it just will not survive a refresh */
-  }
-};
+/**
+ * Everything remembered goes through here, so there is one moment where the
+ * browser is written to and one place to look when it has not been.
+ */
+function keep() {
+  if (store.write(state.store)) return true;
+  status('this browser will not keep anything — copy your work out with Export before you reload');
+  return false;
+}
+
+/** A setting changed and saved, which is most of what the buttons do. */
+function setSetting(name, value) {
+  state.store.settings[name] = value;
+  keep();
+}
 
 function toPieces(data) {
   const problems = new Map();
@@ -155,87 +158,32 @@ function fittedJson(pieces) {
 }
 
 /**
- * Where the browser keeps the measurements when the server will not take them.
+ * The design being worked on, and the measurements in it.
  *
- * Keyed on which file is being drawn, so the worked example and your own roof
- * do not overwrite each other.
+ * `state.data` is the shape the drawing code has always been handed — units and
+ * kerf from the catalogue, `cuts` from the design — so nothing downstream had
+ * to learn about designs.
  */
-const localKey = () => `roof.cuts:${CUTS}`;
-const flagKey = () => `roof.flags:${CUTS}`;
-
-const localCuts = () => {
-  try {
-    return localStorage.getItem(localKey());
-  } catch {
-    return null;
-  }
-};
-
-function forgetLocalCuts() {
-  try {
-    localStorage.removeItem(localKey());
-  } catch {
-    /* nothing was kept in the first place */
-  }
-  showLocalNote();
+function useStore() {
+  const design = store.current(state.store);
+  const { sheets, settings } = state.store;
+  state.data = {
+    ...state.defaults.sheets,
+    sheets: store.pickedSheets(state.store),
+    note: design.note,
+    cuts: design.cuts,
+  };
+  state.flags = new Set(design.flags);
+  state.hiddenSides = new Set((settings.hiddenSides || []).filter((side) => SIDE_ORDER.includes(side)));
+  state.pasted = settings.pastedPlan || '';
+  state.draft = settings.pastedDraft ?? state.pasted;
+  return design;
 }
 
-/**
- * The browser's copy of the measurements — written on every save, before
- * anything is sent anywhere.
- *
- * This is the record. The file is only the record once a read of it comes back
- * matching, which is what `load` checks; a 200 from a PUT proves nothing, and
- * on the published copy it is a plain lie — the host answers PUT with 200 and
- * writes nothing at all. Believing it cost an edit every time the poll ran.
- */
-function keepLocally(text) {
-  try {
-    localStorage.setItem(localKey(), text);
-  } catch {
-    return false;
-  }
-  showLocalNote();
-  return true;
-}
-
-/** Reset is always there; it just says whether there is anything to reset. */
-function showLocalNote() {
-  const button = $('#forgetlocal');
-  if (button) button.classList.toggle('armed', !!localCuts());
-}
-
-/**
- * Write the measurements back: into this browser, and at the file if it will
- * take them.
- *
- * `state.raw.cuts` is set either way, and set first. It is what the watcher
- * compares against, so recording it here keeps our own save from bouncing back
- * as an external change and redrawing over the edit that caused it.
- */
-async function saveCuts() {
-  const text = serialise(state.data.cuts);
-  state.raw.cuts = text;
-  const kept = keepLocally(text);
-  const at = () => new Date().toLocaleTimeString('en-GB');
-
-  let sent;
-  try {
-    const res = await fetch(CUTS, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: text });
-    sent = res.ok ? null : `${res.status} ${await res.text().catch(() => res.statusText)}`;
-  } catch (err) {
-    sent = err.message;
-  }
-
-  if (!kept) {
-    status(`nothing here will keep this — copy it out with Export before you reload`);
-    return false;
-  }
-  status(
-    sent
-      ? `kept in this browser at ${at()} — ${CUTS} did not take it (${sent})`
-      : `saved at ${at()} — kept here until ${CUTS} reads back the same`
-  );
+/** The measurements as they now stand, into the browser. Nothing else writes. */
+function saveCuts() {
+  if (!keep()) return false;
+  status(`saved at ${new Date().toLocaleTimeString('en-GB')} — in this browser, so use Export to move it`);
   return true;
 }
 
@@ -291,7 +239,7 @@ async function onEdgeChange(event) {
 
   cut.edges = cut.edges.map(Number);
   cut.edges[index] = value;
-  await saveCuts();
+  saveCuts();
 
   // Redrawing replaces the boxes, so put the cursor back where the keyboard
   // left it — usually the next box along, after a tab.
@@ -352,7 +300,7 @@ async function onEditorClose() {
   state.editing = null;
   if (!edit || $('#editor').returnValue !== 'ok') return;
   Object.assign(state.data.cuts[edit.id], { edges: edit.edges, turn: edit.turn, mirror: edit.mirror });
-  await saveCuts();
+  saveCuts();
   draw();
 }
 
@@ -368,14 +316,25 @@ function materials(result, data) {
   return `<section class="materials"><h2>Materials</h2>${renderOrder(result, data.units)}</section>`;
 }
 
-/** The measurements a plan was made from, so an edit can retire it. */
-const signature = (pieces) => pieces.map((p) => `${p.id}:${p.edges.join(',')}`).join('|');
+/**
+ * What a plan was made from, so an edit retires it.
+ *
+ * The sheets are in it as well as the pieces: untick a size, or change a price,
+ * and a finished search is a plan built out of sheets you no longer want.
+ */
+const signature = (pieces, sheets) =>
+  `${pieces.map((p) => `${p.id}:${p.edges.join(',')}`).join('|')}#${sheets
+    .map((s) => `${s.id}:${s.width}x${s.length}:${s.price}`)
+    .join(',')}`;
 
 function draw() {
+  // Everything drawn is derived from the store, every time. Anything less and a
+  // ticked box changes what is stored without changing what is on the screen.
+  useStore();
   const data = state.data;
   const { pieces, problems } = toPieces(data);
   const nestable = pieces.filter((p) => p.vertices);
-  const sig = signature(nestable);
+  const sig = signature(nestable, data.sheets);
   if (sig !== state.opt.sig) resetSearches(sig);
   const fast = plan(nestable, data);
   const result = state.opt.plan || fast;
@@ -384,6 +343,8 @@ function draw() {
   $('#roof').innerHTML = renderRoof(pieces, data.units, state.hiddenSides, state.flags);
   drawAsk(pieces, result);
   $('#cutplan').innerHTML = planControls(fast) + renderCutPlan(result, data) + materials(result, data);
+  $('#sheets').innerHTML = renderSheets(state.store.sheets, data.units);
+  $('#designs').innerHTML = renderDesigns(state.store.designs, state.store.current, data.units);
   renderSummary(pieces, result, problems, data.units);
   wireOptimise(nestable, fast);
 }
@@ -430,8 +391,31 @@ function offers() {
  * The fast plan is always there the moment a measurement changes; a search only
  * ever adds cheaper things to choose between, and says by how much.
  */
+/** The ids the plan may use, as a set — every sheet when nothing is ticked off. */
+function pickedIds() {
+  const picks = state.store.settings.sheetPicks;
+  return new Set(Array.isArray(picks) ? picks : state.store.sheets.map((s) => s.id));
+}
+
+/**
+ * A size ticked or unticked. Never all of them off: a plan needs something to
+ * cut from, and an empty catalogue is an error message rather than an answer.
+ */
+function setPicks(ids) {
+  if (!ids.size) {
+    status('the plan needs at least one size to cut from');
+    draw();
+    return;
+  }
+  // Every size ticked is stored as "all", so a size added tomorrow is in the
+  // plan rather than left out for not having been around today.
+  setSetting('sheetPicks', ids.size === state.store.sheets.length ? null : [...ids]);
+  draw();
+}
+
 function planControls(fast) {
-  if (!fast.sheets.length) return '';
+  const picker = renderSheetPicker(state.store.sheets, pickedIds(), state.data.units);
+  if (!fast.sheets.length) return picker;
   const { active, chosen, reduce } = state.opt;
   const rows = offers();
   const status = active
@@ -464,7 +448,7 @@ function planControls(fast) {
 
   // One button, three jobs: start, stop, start again. Starting again adds to the
   // list rather than replacing it, which is what "more" is saying.
-  return `<div class="plan-controls">
+  return `${picker}<div class="plan-controls">
     <label class="reduce">every piece
       <input id="reduce" type="number" step="0.5" min="0" value="${esc(reduce)}"${active ? ' disabled' : ''}> cm smaller</label>
     <button id="optimise">${active ? 'Stop' : rows.length ? 'Optimise more' : 'Optimise'}</button>
@@ -623,20 +607,20 @@ function drawAsk(pieces, ours) {
   });
   $('#pasted').addEventListener('input', (event) => {
     state.draft = event.target.value;
-    remember(DRAFT_KEY, state.draft);
+    setSetting('pastedDraft', state.draft);
   });
   $('#checkplan').addEventListener('click', () => {
     state.draft = $('#pasted').value;
     state.pasted = state.draft.trim();
-    remember(DRAFT_KEY, state.draft);
-    remember(PASTED_KEY, state.pasted);
+    setSetting('pastedDraft', state.draft);
+    setSetting('pastedPlan', state.pasted);
     draw();
   });
   $('#clearplan').addEventListener('click', () => {
     state.pasted = '';
     state.draft = '';
-    remember(PASTED_KEY, '');
-    remember(DRAFT_KEY, '');
+    setSetting('pastedDraft', '');
+    setSetting('pastedPlan', '');
     draw();
   });
 }
@@ -660,44 +644,42 @@ const status = (text) => {
 };
 
 /**
- * Both files, redrawn only when their text has actually changed. Polling is
- * enough at this size and needs no server beyond the static one, so the file
- * stays the only place measurements live: save in the editor, and the drawing
- * follows within the second.
+ * The defaults, then whatever this browser has been doing since.
+ *
+ * The files are read once. They are the shipped roof and the shipped
+ * catalogue: what a new visitor sees, and what Reset goes back to. From the
+ * first edit onwards the store is the record — the page never writes to a file,
+ * and the way work leaves the browser is Export.
  */
-async function load({ quiet = false } = {}) {
-  if (!quiet) status('loading…');
-  let raw;
+async function load() {
+  status('loading…');
+  let cutsDoc;
+  let sheetsDoc;
   try {
     const [sheets, cuts] = await Promise.all([fetchText(SHEETS), fetchText(CUTS)]);
-    raw = { sheets, cuts };
+    sheetsDoc = JSON.parse(sheets);
+    cutsDoc = JSON.parse(cuts);
   } catch (err) {
     status(`could not load — ${err.message}`);
     return;
   }
-  // Edits made where the file cannot be written live in this browser; they are
-  // what to draw, and the file is only the starting point. The one thing that
-  // retires them is the file itself coming back saying the same — which is the
-  // only proof that a save reached it.
-  const kept = localCuts();
-  if (kept === raw.cuts) forgetLocalCuts();
-  else if (kept) raw.cuts = kept;
-  if (raw.sheets === state.raw.sheets && raw.cuts === state.raw.cuts) return;
-  // An edit in progress outranks the file: leave state.raw alone and the change
-  // will be picked up on the next poll, once the box is no longer in use.
-  if (document.activeElement?.classList?.contains('edge-input') || $('#editor').open) return;
-  state.raw = raw;
+  state.defaults = { sheets: sheetsDoc, cuts: cutsDoc };
 
-  try {
-    state.data = { ...JSON.parse(raw.sheets), ...JSON.parse(raw.cuts) };
-  } catch (err) {
-    // Half-typed JSON is normal while editing; keep the last good drawing up.
-    status(`${CUTS} — not valid JSON yet (${err.message})`);
+  // An older version of this page kept a key per thing. A tablet that has been
+  // measuring all week has its only copy of that work in them, so they are
+  // folded in before anything else looks at storage.
+  state.store = store.read() || store.migrate(cutsDoc, sheetsDoc, CUTS) || store.fromDefaults(cutsDoc, sheetsDoc);
+  keep();
+  showSidebar(!state.store.settings.sidebarOff);
+  if (!store.current(state.store)) {
+    emptyDesigns();
     return;
   }
+  useStore();
+  showTab(rememberedTab() || state.store.settings.tab || 'pieces');
   draw();
-  const stamp = new Date().toLocaleTimeString('en-GB');
-  status(`${CUTS} · ${Object.keys(state.data.cuts || {}).length} pieces · ${state.data.sheets.length} sheet sizes · watching, last change ${stamp}`);
+  const design = store.current(state.store);
+  status(`${design.name} · ${Object.keys(design.cuts).length} pieces · ${state.store.sheets.length} sheet sizes`);
 }
 
 /**
@@ -790,23 +772,229 @@ async function runImport() {
     }
   }
 
-  state.data = {
-    ...state.data,
-    note: typeof parsed.note === 'string' ? parsed.note : state.data?.note,
-    cuts: Object.fromEntries(
-      Object.entries(cuts).map(([id, cut]) => [
-        id,
-        { side: cut.side || 'unassigned', edges: cut.edges.map(Number), turn: Number(cut.turn) || 0, mirror: !!cut.mirror },
-      ])
-    ),
-  };
-  await saveCuts();
+  // Straight into the design being worked on, replacing its measurements. The
+  // shape accepted is the one Export writes, which is `cuts.json`'s — so
+  // anything exported before this existed still comes back in.
+  const design = store.current(state.store);
+  design.note = typeof parsed.note === 'string' ? parsed.note : design.note;
+  design.cuts = Object.fromEntries(
+    Object.entries(cuts).map(([id, cut]) => [
+      id,
+      { side: cut.side || 'unassigned', edges: cut.edges.map(Number), turn: Number(cut.turn) || 0, mirror: !!cut.mirror },
+    ])
+  );
+  // Marks belong to pieces, and these are different pieces.
+  design.flags = design.flags.filter((id) => id in design.cuts);
+  saveCuts();
+  useStore();
   draw();
   $('#importer').close('cancel');
 }
 
-const TAB_KEY = 'roof.tab';
-const SIDEBAR_KEY = 'roof.sidebarOff';
+/**
+ * A design: opening one, renaming it, throwing it away.
+ *
+ * Open leads, because it is what you came to the list for. Nothing is a copy
+ * here — a design is switched or renamed in place — so the dialog acts at once
+ * and closes.
+ */
+function openDesign(id) {
+  const design = state.store.designs[id];
+  if (!design) return;
+  state.design = id;
+  $('#design-title').textContent = design.name;
+  $('#design-name').value = design.name;
+  $('#design-open').hidden = id === state.store.current;
+  $('#design-status').textContent =
+    id === state.store.current ? 'This is the one you are working on.' : '';
+  $('#designeditor').showModal();
+  $('#designeditor button[value=\"cancel\"]').focus();
+}
+
+function useDesign(id) {
+  if (!state.store.designs[id]) return;
+  state.store.current = id;
+  keep();
+  // A different roof is a different search; the plan on screen was not made
+  // from these measurements.
+  resetSearches('');
+  draw();
+  $('#designeditor').close('cancel');
+  status(`${state.store.designs[id].name} — open`);
+}
+
+function renameDesign() {
+  const design = state.store.designs[state.design];
+  const name = $('#design-name').value.trim();
+  if (!design) return;
+  if (!name) {
+    $('#design-status').textContent = 'A design needs a name.';
+    return;
+  }
+  design.name = name;
+  keep();
+  draw();
+  $('#designeditor').close('cancel');
+}
+
+function deleteDesign() {
+  const design = state.store.designs[state.design];
+  if (!design) return;
+  if (!confirm(`Delete ${design.name}? Everything measured on it goes with it.`)) return;
+  delete state.store.designs[state.design];
+  // Something has to be open while there is anything to open.
+  if (state.store.current === state.design) state.store.current = Object.keys(state.store.designs)[0] || null;
+  keep();
+  resetSearches('');
+  if (state.store.current) draw();
+  else emptyDesigns();
+  $('#designeditor').close('cancel');
+}
+
+/**
+ * Every design deleted. There is no roof to draw, so the only thing on the
+ * page is the way back to one.
+ */
+function emptyDesigns() {
+  for (const id of ['pieces', 'roof', 'cutplan']) $(`#${id}`).innerHTML = '';
+  $('#summary').innerHTML = '';
+  $('#warnings').innerHTML = '';
+  $('#designs').innerHTML = renderDesigns({}, null, state.defaults.sheets.units);
+  showTab('designs');
+  status('no designs — start one from the roof we ship');
+}
+
+/** A copy of the roof being worked on, under a new name. */
+function saveAs() {
+  const design = store.current(state.store);
+  const name = prompt('Save this roof as', design ? `${design.name} copy` : 'My roof');
+  if (name === null) return;
+  const id = store.newId();
+  state.store.designs[id] = design
+    ? { ...structuredClone(design), name: name.trim() || 'Untitled' }
+    : store.toDesign(name.trim() || 'Untitled', state.defaults.cuts);
+  state.store.current = id;
+  keep();
+  draw();
+  showTab('designs');
+  status(`${state.store.designs[id].name} — saved and open`);
+}
+
+/**
+ * Reset, one thing at a time.
+ *
+ * Four separate acts that happen to share a button. Doing all four is rarely
+ * what is wanted, so nothing is ticked to begin with and nothing untouched is
+ * touched.
+ */
+function openReset() {
+  for (const id of ['reset-cuts', 'reset-sheets', 'reset-settings', 'reset-designs']) $(`#${id}`).checked = false;
+  $('#reset-status').textContent = '';
+  $('#resetter').showModal();
+  $('#resetter button[value=\"cancel\"]').focus();
+}
+
+function runReset() {
+  const want = {
+    cuts: $('#reset-cuts').checked,
+    sheets: $('#reset-sheets').checked,
+    settings: $('#reset-settings').checked,
+    designs: $('#reset-designs').checked,
+  };
+  if (!Object.values(want).some(Boolean)) {
+    $('#reset-status').textContent = 'Tick what you want reset.';
+    return;
+  }
+  const what = Object.entries(want).filter(([, on]) => on).map(([name]) => name);
+  if (!confirm(`Reset ${what.join(', ')}? This cannot be undone.`)) return;
+
+  if (want.designs) {
+    state.store.designs = {};
+    state.store.current = null;
+  } else if (want.cuts) {
+    const design = store.current(state.store);
+    if (design) {
+      design.cuts = structuredClone(state.defaults.cuts.cuts);
+      design.note = state.defaults.cuts.note || '';
+      design.flags = [];
+    }
+  }
+  if (want.sheets) state.store.sheets = (state.defaults.sheets.sheets || []).map(store.toSheet);
+  if (want.settings) state.store.settings = store.fromDefaults(state.defaults.cuts, state.defaults.sheets).settings;
+
+  keep();
+  resetSearches('');
+  $('#resetter').close('cancel');
+  if (state.store.current) {
+    draw();
+    showSidebar(!state.store.settings.sidebarOff);
+    status(`reset: ${what.join(', ')}`);
+  } else {
+    emptyDesigns();
+  }
+}
+
+/**
+ * One sheet size, on a copy until Save.
+ *
+ * `editing` is the id being changed, or null for a size being added. The id
+ * itself is never on the form: the cut-plan selection points at it, so renaming
+ * one would quietly drop a size out of the plan.
+ */
+function openSheet(id) {
+  const sheet = state.store.sheets.find((s) => s.id === id);
+  state.sheet = sheet ? sheet.id : null;
+  const units = state.data.units;
+  $('#sheet-title').textContent = sheet ? `${sheet.label || sheet.id}` : 'New sheet size';
+  $('#sheet-label').value = sheet ? sheet.label : '';
+  $('#sheet-width').value = sheet ? sheet.width : '';
+  $('#sheet-length').value = sheet ? sheet.length : '';
+  $('#sheet-price').value = sheet ? sheet.price : '';
+  $('#sheet-url').value = sheet ? sheet.url : '';
+  $('#sheet-delete').hidden = !sheet;
+  $('#sheet-status').textContent = sheet ? '' : `Width and length in ${units}.`;
+  $('#sheeteditor').showModal();
+  $('#sheeteditor button[value="cancel"]').focus();
+}
+
+function saveSheet() {
+  const note = (text) => {
+    $('#sheet-status').textContent = text;
+  };
+  const width = Number($('#sheet-width').value);
+  const length = Number($('#sheet-length').value);
+  const price = Number($('#sheet-price').value);
+  if (!(width > 0) || !(length > 0)) {
+    note('Width and length both have to be more than zero.');
+    return;
+  }
+  if (!Number.isFinite(price) || price < 0) {
+    note('The price has to be a number, and not a negative one.');
+    return;
+  }
+
+  const label = $('#sheet-label').value.trim() || `${width}x${length}`;
+  const url = $('#sheet-url').value.trim();
+  const existing = state.store.sheets.find((s) => s.id === state.sheet);
+  if (existing) Object.assign(existing, { label, width, length, price, url });
+  else state.store.sheets.push(store.toSheet({ id: store.newId(), label, width, length, price, url }));
+
+  keep();
+  draw();
+  $('#sheeteditor').close('cancel');
+}
+
+function deleteSheet() {
+  const sheet = state.store.sheets.find((s) => s.id === state.sheet);
+  if (!sheet) return;
+  if (!confirm(`Delete ${sheet.label || sheet.id}? The cut plan will stop using it.`)) return;
+  state.store.sheets = state.store.sheets.filter((s) => s.id !== sheet.id);
+  const picks = state.store.settings.sheetPicks;
+  if (Array.isArray(picks)) state.store.settings.sheetPicks = picks.filter((id) => id !== sheet.id);
+  keep();
+  draw();
+  $('#sheeteditor').close('cancel');
+}
 
 /** Out of the way, and it stays out of the way until it is asked back. */
 function showSidebar(on) {
@@ -814,36 +1002,27 @@ function showSidebar(on) {
   const button = $('#sidebar-toggle');
   button.setAttribute('aria-expanded', String(on));
   button.title = on ? 'Hide the sidebar' : 'Show the sidebar';
-  remember(SIDEBAR_KEY, on ? '' : '1');
+  if (state.store) setSetting('sidebarOff', !on);
 }
 
 function showTab(name) {
   for (const panel of document.querySelectorAll('.panel')) {
     panel.hidden = panel.id !== name;
   }
-  for (const tab of document.querySelectorAll('.tabs button[data-tab]')) {
+  for (const tab of document.querySelectorAll('.toolbar button[data-tab]')) {
     tab.classList.toggle('active', tab.dataset.tab === name);
   }
   // Refreshing to see a measurement redrawn should not send you back to the
-  // first tab. Storage can be turned off, and a missing tab is not worth an error.
-  try {
-    localStorage.setItem(TAB_KEY, name);
-  } catch {
-    /* nothing to remember it with */
-  }
+  // first tab.
+  if (state.store) setSetting('tab', name);
 }
 
 function rememberedTab() {
-  let name;
-  try {
-    name = localStorage.getItem(TAB_KEY);
-  } catch {
-    return null;
-  }
-  return document.querySelector(`.tabs button[data-tab="${name}"]`) ? name : null;
+  const name = state.store?.settings.tab;
+  return document.querySelector(`.toolbar button[data-tab="${name}"]`) ? name : null;
 }
 
-document.querySelectorAll('.tabs button[data-tab]').forEach((btn) => {
+document.querySelectorAll('.toolbar button[data-tab]').forEach((btn) => {
   btn.addEventListener('click', () => showTab(btn.dataset.tab));
 });
 // Only the open tab is printed; the stylesheet does the choosing, so there is
@@ -855,14 +1034,53 @@ $('#export-copy').addEventListener('click', copyExport);
 $('#export-whatsapp').addEventListener('click', whatsappExport);
 $('#import').addEventListener('click', openImport);
 $('#import-go').addEventListener('click', runImport);
-$('#forgetlocal').addEventListener('click', () => {
-  if (localCuts() && !confirm(`Throw away the measurements kept in this browser and go back to ${CUTS}?`)) return;
-  forgetLocalCuts();
-  // The drawing is of the browser's copy, so there is nothing to compare
-  // against until the file has been read again.
-  state.raw = {};
-  load();
+$('#forgetlocal').addEventListener('click', openReset);
+$('#reset-go').addEventListener('click', runReset);
+$('#saveas').addEventListener('click', saveAs);
+$('#designs').addEventListener('click', (event) => {
+  if (event.target.closest('#design-new')) {
+    const id = store.newId();
+    state.store.designs[id] = store.toDesign('My roof', state.defaults.cuts);
+    state.store.current = id;
+    keep();
+    draw();
+    return;
+  }
+  const row = event.target.closest('.design-row');
+  if (row) openDesign(row.dataset.design);
 });
+$('#design-open').addEventListener('click', () => useDesign(state.design));
+$('#design-rename').addEventListener('click', renameDesign);
+$('#design-delete').addEventListener('click', deleteDesign);
+$('#cutplan').addEventListener('change', (event) => {
+  const box = event.target;
+  const ids = pickedIds();
+  if (box.classList?.contains('pick-one')) {
+    if (box.checked) ids.add(box.dataset.sheet);
+    else ids.delete(box.dataset.sheet);
+    setPicks(ids);
+    return;
+  }
+  if (box.classList?.contains('pick-all')) {
+    for (const sheet of state.store.sheets) {
+      if (sheet.width !== Number(box.dataset.width)) continue;
+      if (box.checked) ids.add(sheet.id);
+      else ids.delete(sheet.id);
+    }
+    setPicks(ids);
+  }
+});
+$('#cutplan').addEventListener('click', (event) => {
+  if (event.target.closest('#pick-all')) setPicks(new Set(state.store.sheets.map((s) => s.id)));
+  if (event.target.closest('#pick-none')) setPicks(new Set());
+});
+$('#sheets').addEventListener('click', (event) => {
+  if (event.target.closest('#sheet-new')) return openSheet(null);
+  const row = event.target.closest('.sheet-row');
+  if (row) openSheet(row.dataset.sheet);
+});
+$('#sheet-save').addEventListener('click', saveSheet);
+$('#sheet-delete').addEventListener('click', deleteSheet);
 $('#pieces').addEventListener('change', onEdgeChange);
 $('#pieces').addEventListener('click', onStep);
 $('#editor-body').addEventListener('click', onStep);
@@ -884,7 +1102,7 @@ $('#roof').addEventListener('change', (event) => {
   if (!box) return;
   if (box.checked) state.hiddenSides.delete(box.dataset.side);
   else state.hiddenSides.add(box.dataset.side);
-  remember(HIDDEN_KEY, [...state.hiddenSides].join(','));
+  setSetting('hiddenSides', [...state.hiddenSides]);
   draw();
 });
 /**
@@ -901,7 +1119,8 @@ function toggleFlag(node) {
   else state.flags.delete(id);
   node.classList.toggle('on', on);
   node.setAttribute('aria-pressed', String(on));
-  remember(flagKey(), [...state.flags].join(','));
+  store.current(state.store).flags = [...state.flags];
+  keep();
 }
 
 $('#roof').addEventListener('click', (event) => {
@@ -933,26 +1152,6 @@ $('#pieces').addEventListener('input', (event) => {
   if (event.target.classList?.contains('edge-input')) markClosure(event.target);
 });
 
-try {
-  state.pasted = localStorage.getItem(PASTED_KEY) || '';
-  state.draft = localStorage.getItem(DRAFT_KEY) ?? state.pasted;
-  // A side that has since been renamed away is simply not hidden any more.
-  const hidden = (localStorage.getItem(HIDDEN_KEY) || '').split(',').filter((s) => SIDE_ORDER.includes(s));
-  state.hiddenSides = new Set(hidden);
-  state.flags = new Set((localStorage.getItem(flagKey()) || '').split(',').filter(Boolean));
-} catch {
-  /* nothing remembered */
-}
-
-showLocalNote();
 $('#sidebar-toggle').addEventListener('click', () => showSidebar(document.body.classList.contains('sidebar-off')));
-showSidebar(!(() => {
-  try {
-    return localStorage.getItem(SIDEBAR_KEY);
-  } catch {
-    return null;
-  }
-})());
-showTab(rememberedTab() || 'pieces');
+// Everything else waits on the store, which `load` is what reads.
 load();
-setInterval(() => load({ quiet: true }), 1000);

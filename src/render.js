@@ -484,6 +484,140 @@ export function renderRoof(pieces, units, hidden = new Set(), flagged = new Set(
   </figure>`;
 }
 
+/**
+ * The designs kept in this browser.
+ *
+ * One is always open, and it is marked; the rest are a tap away. A design is
+ * the whole roof — its measurements, its flags, how each piece lies — so
+ * "Save as" is how you try something without losing what you had.
+ */
+export function renderDesigns(designs, currentId, units) {
+  const ids = Object.keys(designs);
+  if (!ids.length) {
+    return `<div class="designs">
+      <p class="muted">No designs. There is nothing to draw until there is one.</p>
+      <button type="button" id="design-new" class="primary">Start from the roof we ship</button>
+    </div>`;
+  }
+
+  const rows = ids
+    .map((id) => {
+      const design = designs[id];
+      const pieces = Object.keys(design.cuts || {}).length;
+      const flags = (design.flags || []).length;
+      return `<li>
+        <button type="button" class="design-row${id === currentId ? ' open' : ''}" data-design="${esc(id)}">
+          <span class="name">${esc(design.name)}</span>
+          <span class="muted">${pieces} ${pieces === 1 ? 'piece' : 'pieces'}${flags ? ` &middot; ${flags} flagged` : ''}</span>
+          ${id === currentId ? '<span class="tag">open</span>' : ''}
+        </button>
+      </li>`;
+    })
+    .join('');
+
+  return `<div class="designs">
+    <p class="hint">Every design is a whole roof of its own. Save as, on the toolbar, makes a copy of
+      the one you are working on so you can try something without losing it. All in this browser —
+      Export is how one leaves.</p>
+    <ul class="design-list">${rows}</ul>
+  </div>`;
+}
+
+/**
+ * Which sizes the plan may use.
+ *
+ * Folded away, because the answer is usually "all of them" and fifty-three
+ * boxes is not something to look at while reading a plan. The count in the
+ * summary is what you need at a glance; open it when you want to price the job
+ * out of one width, or without the size that is on back-order.
+ */
+export function renderSheetPicker(sheets, picked, units) {
+  const widths = new Map();
+  for (const sheet of [...sheets].sort((a, b) => a.width - b.width || a.length - b.length)) {
+    if (!widths.has(sheet.width)) widths.set(sheet.width, []);
+    widths.get(sheet.width).push(sheet);
+  }
+
+  const groups = [...widths]
+    .map(([width, list]) => {
+      const on = list.filter((s) => picked.has(s.id)).length;
+      return `<div class="pick-group">
+        <label class="pick-width">
+          <input type="checkbox" class="pick-all" data-width="${width}"${on === list.length ? ' checked' : ''}
+                 ${on && on < list.length ? 'data-some="1"' : ''}>
+          <b>${fmt(width)} ${esc(units)}</b>
+        </label>
+        <div class="pick-lengths">${list
+          .map(
+            (sheet) => `<label class="pick" title="${esc(sheet.label || sheet.id)} — &pound;${sheet.price.toFixed(2)}">
+              <input type="checkbox" class="pick-one" data-sheet="${esc(sheet.id)}"${picked.has(sheet.id) ? ' checked' : ''}>
+              <span>${fmt(sheet.length)}</span>
+            </label>`
+          )
+          .join('')}</div>
+      </div>`;
+    })
+    .join('');
+
+  return `<details class="sheet-picker"${picked.size === sheets.length ? '' : ' open'}>
+    <summary>Sizes in the plan <span class="muted">${picked.size} of ${sheets.length}</span></summary>
+    <div class="pick-groups">${groups}</div>
+    <div class="pick-actions">
+      <button type="button" id="pick-all">All</button>
+      <button type="button" id="pick-none">None</button>
+    </div>
+  </details>`;
+}
+
+/**
+ * The catalogue, grouped by width.
+ *
+ * Fifty-three sizes in one list is a wall; seven widths with their lengths
+ * under them is the way the shop sells them and the way you think about them —
+ * the width is the piece's width, the length is what you are choosing.
+ */
+export function renderSheets(sheets, units) {
+  const rows = (list) =>
+    list
+      .map(
+        (sheet) => `<li>
+        <button type="button" class="sheet-row" data-sheet="${esc(sheet.id)}">
+          <span class="name">${esc(sheet.label || sheet.id)}</span>
+          <span class="size">${fmt(sheet.width)} &times; ${fmt(sheet.length)} ${esc(units)}</span>
+          <span class="price">&pound;${sheet.price.toFixed(2)}</span>
+        </button>
+        ${sheet.url ? `<a class="sheet-link" href="${esc(sheet.url)}" target="_blank" rel="noopener" title="Open the shop page">&#8599;</a>` : ''}
+      </li>`
+      )
+      .join('');
+
+  const widths = new Map();
+  for (const sheet of [...sheets].sort((a, b) => a.width - b.width || a.length - b.length)) {
+    if (!widths.has(sheet.width)) widths.set(sheet.width, []);
+    widths.get(sheet.width).push(sheet);
+  }
+
+  return `<div class="sheet-manager">
+    <div class="sheet-tools">
+      <button type="button" id="sheet-new" class="primary">Add a size</button>
+    </div>
+    <p class="hint">The sizes you can buy. Tap one to change its price or its name, or add a size the
+      shop has started stocking. Kept in this browser, not in the file.</p>
+    ${
+      widths.size
+        ? [...widths]
+            .map(
+              ([width, list]) => `<section class="sheet-group">
+        <h2>${fmt(width)} ${esc(units)} wide <span class="muted">${list.length} ${list.length === 1 ? 'size' : 'sizes'}</span></h2>
+        <ul class="sheet-list">${rows(list)}</ul>
+      </section>`
+            )
+            .join('')
+        : '<p class="muted">No sizes yet.</p>'
+    }
+  </div>`;
+}
+
 const EDIT_SIZE = 320;
 
 /**
