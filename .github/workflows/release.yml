@@ -45,6 +45,17 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
+      # The page says which version is on the roof, and the tag is the only
+      # place that is known. Stamped into the copy being uploaded, not into the
+      # repository — a checkout has no tag and should not claim one.
+      - name: Stamp the version into the page
+        run: |
+          sed -i "s|<!--VERSION-->|${GITHUB_REF_NAME}|" index.html
+          grep -q "${GITHUB_REF_NAME}" index.html || {
+            echo "::error::the version marker was not found in index.html"
+            exit 1
+          }
+
       - name: Copy it up
         run: |
           rsync -rtz \
