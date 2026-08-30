@@ -505,12 +505,21 @@ export function renderDesigns(designs, currentId, units) {
       const design = designs[id];
       const pieces = Object.keys(design.cuts || {}).length;
       const flags = (design.flags || []).length;
-      return `<li>
-        <button type="button" class="design-row${id === currentId ? ' open' : ''}" data-design="${esc(id)}">
-          <span class="name">${esc(design.name)}</span>
-          <span class="muted">${pieces} ${pieces === 1 ? 'piece' : 'pieces'}${flags ? ` &middot; ${flags} flagged` : ''}</span>
-          ${id === currentId ? '<span class="tag">open</span>' : ''}
-        </button>
+      // Open is the everyday action and Edit the rare one, so Open leads and
+      // carries the weight. Which design you are working on is said on the row
+      // itself rather than only inside a dialog nobody has opened — and that
+      // row has nothing to open, so it does not offer it.
+      // With one design there is nothing it could be current against, so the
+      // tag says nothing and is left off.
+      const current = id === currentId;
+      const marked = current && ids.length > 1;
+      return `<li class="design-row${marked ? ' current' : ''}" data-design="${esc(id)}">
+        <span class="name">${esc(design.name)}${marked ? ' <span class="tag">current</span>' : ''}</span>
+        <span class="muted">${pieces} ${pieces === 1 ? 'piece' : 'pieces'}${flags ? ` &middot; ${flags} flagged` : ''}</span>
+        <span class="design-actions">
+          ${current ? '' : `<button type="button" class="design-open primary" data-design="${esc(id)}">Open</button>`}
+          <button type="button" class="design-edit" data-design="${esc(id)}">Edit</button>
+        </span>
       </li>`;
     })
     .join('');
