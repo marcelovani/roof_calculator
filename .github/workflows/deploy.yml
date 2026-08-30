@@ -1,0 +1,54 @@
+# Every push to main goes straight to http://gginternational.net/roof, because
+# the roof is measured on a tablet and the tablet only ever sees what is live.
+# Nothing is built: the page is plain modules and the browser loads them as they
+# are, so a deploy is a copy.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One at a time. Two rsyncs into the same folder would interleave.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test test/*.test.mjs
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Take the deploy key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Copy it up
+        run: |
+          rsync -rtz \
+            --exclude '.git' --exclude '.github' --exclude '.gitignore' \
+            --exclude '.DS_Store' --exclude '.playwright-mcp' \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
+            ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}"
+
+      - name: Check it answers
+        run: |
+          for path in / /style.css /src/main.js /data/cuts.json; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "${{ vars.SITE_URL || 'http://gginternational.net/roof' }}$path")
+            echo "$path -> $code"
+            [ "$code" = "200" ] || exit 1
+          done

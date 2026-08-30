@@ -1,0 +1,14 @@
+# The page is edited and re-uploaded often, and a tablet that has already seen it
+# will happily run last week's JavaScript against this week's HTML — which looks
+# exactly like a button that does nothing. Nothing here is big enough to be worth
+# caching, so ask for it fresh every time.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|css|js|mjs|json)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive Off
+</IfModule>

@@ -1,0 +1,7 @@
+.DS_Store
+node_modules/
+
+# Local tooling and my own backups of the measurements, not part of the project.
+.playwright-mcp/
+*.bak
+data/*.bak*

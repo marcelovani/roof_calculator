@@ -1,0 +1,33 @@
+{
+  "note": "Worked example — a hipped roof with 69 cm panels.",
+  "cuts": {
+    "1": { "side": "west", "edges": [150.5, 158.1, 62] },
+    "2": { "side": "west", "edges": [190.1, 55, 190.1, 69] },
+    "3": { "side": "west", "edges": [230, 63, 230, 69] },
+    "4": { "side": "west", "edges": [230, 63, 230, 69] },
+    "5": { "side": "west", "edges": [190.1, 55, 190.1, 69] },
+    "6": { "side": "west", "edges": [158.1, 150.5, 62] },
+    "7": { "side": "south", "edges": [240.2, 51, 240.2, 69] },
+    "8": { "side": "south", "edges": [240, 69, 240, 69] },
+    "9": { "side": "south", "edges": [240, 69, 240, 69] },
+    "10": { "side": "south", "edges": [240, 69, 240, 69] },
+    "11": { "side": "south", "edges": [240, 69, 240, 69] },
+    "12": { "side": "south", "edges": [240, 69, 240, 69] },
+    "13": { "side": "south", "edges": [240, 69, 240, 69] },
+    "14": { "side": "south", "edges": [240.2, 51, 240.2, 69] },
+    "15": { "side": "east", "edges": [150.5, 158.1, 62] },
+    "16": { "side": "east", "edges": [190.1, 55, 190.1, 69] },
+    "17": { "side": "east", "edges": [230, 63, 230, 69] },
+    "18": { "side": "east", "edges": [230, 63, 230, 69] },
+    "19": { "side": "east", "edges": [190.1, 55, 190.1, 69] },
+    "20": { "side": "east", "edges": [158.1, 150.5, 62] },
+    "21": { "side": "north", "edges": [240.2, 51, 240.2, 69] },
+    "22": { "side": "north", "edges": [240, 69, 240, 69] },
+    "23": { "side": "north", "edges": [240, 69, 240, 69] },
+    "24": { "side": "north", "edges": [240, 69, 240, 69] },
+    "25": { "side": "north", "edges": [240, 69, 240, 69] },
+    "26": { "side": "north", "edges": [240, 69, 240, 69] },
+    "27": { "side": "north", "edges": [240, 69, 240, 69] },
+    "28": { "side": "north", "edges": [240.2, 51, 240.2, 69] }
+  }
+}

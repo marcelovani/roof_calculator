@@ -1,0 +1,33 @@
+{
+  "note": "Existings. Edges clockwise from the bottom-left corner: [left, top, right, bottom] for 4 sides, [left, right, bottom] for 3. The last edge is always the base. All values in cm.",
+  "cuts": {
+    "1": { "side": "west", "edges": [92, 72, 59] },
+    "2": { "side": "west", "edges": [76, 109, 161, 69] },
+    "3": { "side": "west", "edges": [171, 90, 238, 60] },
+    "4": { "side": "west", "edges": [238, 92, 171, 60] },
+    "5": { "side": "west", "edges": [168, 104, 91, 69] },
+    "6": { "side": "west", "edges": [88, 116, 79] },
+    "7": { "side": "south", "edges": [120, 89, 76] },
+    "8": { "side": "south", "edges": [91, 105, 168, 79] },
+    "9": { "side": "south", "edges": [171, 105, 241, 70] },
+    "10": { "side": "south", "edges": [242, 70, 242, 70] },
+    "11": { "side": "south", "edges": [242, 70, 242, 70] },
+    "12": { "side": "south", "edges": [240, 105, 171, 70] },
+    "13": { "side": "south", "edges": [167, 101, 93, 70] },
+    "14": { "side": "south", "edges": [86, 118, 80] },
+    "15": { "side": "east", "edges": [120, 88, 78] },
+    "16": { "side": "east", "edges": [91, 104, 168, 69] },
+    "17": { "side": "east", "edges": [171, 95, 241, 69] },
+    "18": { "side": "east", "edges": [242, 97, 171, 69] },
+    "19": { "side": "east", "edges": [162, 111, 76, 69] },
+    "20": { "side": "east", "edges": [72, 92, 58] },
+    "21": { "side": "north", "edges": [113, 82, 76] },
+    "22": { "side": "north", "edges": [85, 100, 156, 69] },
+    "23": { "side": "north", "edges": [159, 92, 224, 69] },
+    "24": { "side": "north", "edges": [224, 69, 224, 69] },
+    "25": { "side": "north", "edges": [224, 70, 224, 70] },
+    "26": { "side": "north", "edges": [224, 91, 160, 69] },
+    "27": { "side": "north", "edges": [156, 100, 86, 69] },
+    "28": { "side": "north", "edges": [82, 113, 78] }
+  }
+}

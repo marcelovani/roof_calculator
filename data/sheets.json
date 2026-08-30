@@ -1,0 +1,326 @@
+{
+  "units": "cm",
+  "kerf": 0.5,
+  "margin": 0,
+  "priceNote": "Axiome Clear 16mm, clearambershop.com, read 2026-08-28. GBP inc VAT, delivery free over 400.",
+  "sheets": [
+    {
+      "id": "690x1000mm",
+      "width": 69,
+      "length": 100,
+      "price": 13.94
+    },
+    {
+      "id": "690x2000mm",
+      "width": 69,
+      "length": 200,
+      "price": 27.89
+    },
+    {
+      "id": "690x2500mm",
+      "width": 69,
+      "length": 250,
+      "price": 34.86
+    },
+    {
+      "id": "690x3000mm",
+      "width": 69,
+      "length": 300,
+      "price": 41.83
+    },
+    {
+      "id": "690x3500mm",
+      "width": 69,
+      "length": 350,
+      "price": 48.8
+    },
+    {
+      "id": "690x4000mm",
+      "width": 69,
+      "length": 400,
+      "price": 55.77
+    },
+    {
+      "id": "690x4500mm",
+      "width": 69,
+      "length": 450,
+      "price": 62.74
+    },
+    {
+      "id": "690x5000mm",
+      "width": 69,
+      "length": 500,
+      "price": 69.71
+    },
+    {
+      "id": "690x6000mm",
+      "width": 69,
+      "length": 600,
+      "price": 83.66
+    },
+    {
+      "id": "690x7000mm",
+      "width": 69,
+      "length": 700,
+      "price": 97.6
+    },
+    {
+      "id": "840x2000mm",
+      "width": 84,
+      "length": 200,
+      "price": 33.95
+    },
+    {
+      "id": "840x2500mm",
+      "width": 84,
+      "length": 250,
+      "price": 42.43
+    },
+    {
+      "id": "840x3000mm",
+      "width": 84,
+      "length": 300,
+      "price": 50.92
+    },
+    {
+      "id": "840x3500mm",
+      "width": 84,
+      "length": 350,
+      "price": 59.41
+    },
+    {
+      "id": "840x4000mm",
+      "width": 84,
+      "length": 400,
+      "price": 67.89
+    },
+    {
+      "id": "840x4500mm",
+      "width": 84,
+      "length": 450,
+      "price": 76.38
+    },
+    {
+      "id": "840x5000mm",
+      "width": 84,
+      "length": 500,
+      "price": 84.87
+    },
+    {
+      "id": "840x6000mm",
+      "width": 84,
+      "length": 600,
+      "price": 101.84
+    },
+    {
+      "id": "1050x1000mm",
+      "width": 105,
+      "length": 100,
+      "price": 21.22
+    },
+    {
+      "id": "1050x2000mm",
+      "width": 105,
+      "length": 200,
+      "price": 42.43
+    },
+    {
+      "id": "1050x2500mm",
+      "width": 105,
+      "length": 250,
+      "price": 53.04
+    },
+    {
+      "id": "1050x3000mm",
+      "width": 105,
+      "length": 300,
+      "price": 63.65
+    },
+    {
+      "id": "1050x3500mm",
+      "width": 105,
+      "length": 350,
+      "price": 74.26
+    },
+    {
+      "id": "1050x4000mm",
+      "width": 105,
+      "length": 400,
+      "price": 84.87
+    },
+    {
+      "id": "1050x4500mm",
+      "width": 105,
+      "length": 450,
+      "price": 95.48
+    },
+    {
+      "id": "1050x5000mm",
+      "width": 105,
+      "length": 500,
+      "price": 106.09
+    },
+    {
+      "id": "1050x6000mm",
+      "width": 105,
+      "length": 600,
+      "price": 127.3
+    },
+    {
+      "id": "1050x7000mm",
+      "width": 105,
+      "length": 700,
+      "price": 148.52
+    },
+    {
+      "id": "1250x2000mm",
+      "width": 125,
+      "length": 200,
+      "price": 50.52
+    },
+    {
+      "id": "1250x2500mm",
+      "width": 125,
+      "length": 250,
+      "price": 63.15
+    },
+    {
+      "id": "1250x3000mm",
+      "width": 125,
+      "length": 300,
+      "price": 75.78
+    },
+    {
+      "id": "1250x3500mm",
+      "width": 125,
+      "length": 350,
+      "price": 88.4
+    },
+    {
+      "id": "1250x4000mm",
+      "width": 125,
+      "length": 400,
+      "price": 101.03
+    },
+    {
+      "id": "1250x4500mm",
+      "width": 125,
+      "length": 450,
+      "price": 113.66
+    },
+    {
+      "id": "1250x5000mm",
+      "width": 125,
+      "length": 500,
+      "price": 126.29
+    },
+    {
+      "id": "1400x2000mm",
+      "width": 140,
+      "length": 200,
+      "price": 56.58
+    },
+    {
+      "id": "1400x2500mm",
+      "width": 140,
+      "length": 250,
+      "price": 70.72
+    },
+    {
+      "id": "1400x3000mm",
+      "width": 140,
+      "length": 300,
+      "price": 84.87
+    },
+    {
+      "id": "1400x3500mm",
+      "width": 140,
+      "length": 350,
+      "price": 99.01
+    },
+    {
+      "id": "1400x4000mm",
+      "width": 140,
+      "length": 400,
+      "price": 113.16
+    },
+    {
+      "id": "1400x4500mm",
+      "width": 140,
+      "length": 450,
+      "price": 127.3
+    },
+    {
+      "id": "1400x5000mm",
+      "width": 140,
+      "length": 500,
+      "price": 141.45
+    },
+    {
+      "id": "1700x2000mm",
+      "width": 170,
+      "length": 200,
+      "price": 68.7
+    },
+    {
+      "id": "1700x2500mm",
+      "width": 170,
+      "length": 250,
+      "price": 85.88
+    },
+    {
+      "id": "1700x3000mm",
+      "width": 170,
+      "length": 300,
+      "price": 103.05
+    },
+    {
+      "id": "1700x3500mm",
+      "width": 170,
+      "length": 350,
+      "price": 120.23
+    },
+    {
+      "id": "1700x4000mm",
+      "width": 170,
+      "length": 400,
+      "price": 137.41
+    },
+    {
+      "id": "2100x1000mm",
+      "width": 210,
+      "length": 100,
+      "price": 42.43
+    },
+    {
+      "id": "2100x2000mm",
+      "width": 210,
+      "length": 200,
+      "price": 84.87
+    },
+    {
+      "id": "2100x2500mm",
+      "width": 210,
+      "length": 250,
+      "price": 106.09
+    },
+    {
+      "id": "2100x3000mm",
+      "width": 210,
+      "length": 300,
+      "price": 127.3
+    },
+    {
+      "id": "2100x3500mm",
+      "width": 210,
+      "length": 350,
+      "price": 148.52
+    },
+    {
+      "id": "2100x4000mm",
+      "width": 210,
+      "length": 400,
+      "price": 169.75
+    }
+  ]
+}

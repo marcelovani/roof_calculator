@@ -1,0 +1,289 @@
+:root {
+  --bg: #f6f5f2;
+  --panel: #fff;
+  --ink: #1e2225;
+  --muted: #6f7780;
+  --line: #d8d5cf;
+  --accent: #3f7cac;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  display: flex;
+  min-height: 100vh;
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.sidebar {
+  width: 290px;
+  flex: 0 0 290px;
+  padding: 20px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.sidebar h1 { font-size: 17px; margin: 0 0 10px; }
+.sidebar h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 22px 0 8px; }
+.hint { font-size: 12px; color: var(--muted); margin: 8px 0; }
+.muted { color: var(--muted); font-weight: 400; }
+code { background: #eceae5; padding: 1px 4px; border-radius: 3px; font-size: 11px; }
+
+.totals { list-style: none; margin: 0; padding: 0; }
+.totals li { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.totals li span:first-child { text-transform: capitalize; }
+.totals li .muted { grid-column: 1 / -1; font-size: 11px; }
+.totals .grand { border-bottom: none; margin-top: 6px; font-size: 15px; }
+
+.warnings { margin: 0; padding-left: 16px; font-size: 12px; color: #8a3d2f; }
+.warnings li { margin-bottom: 6px; }
+
+button.primary {
+  width: 100%; padding: 8px; border: 1px solid var(--accent); border-radius: 5px;
+  background: var(--accent); color: #fff; font-size: 13px; cursor: pointer;
+}
+button.primary:hover { filter: brightness(1.08); }
+/* The plain ones under it — the same shape, without the weight of the accent. */
+.sidebar button:not(.primary) {
+  width: 100%; margin-top: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--panel); color: var(--ink); font-size: 13px; cursor: pointer;
+}
+/* There is something in this browser to throw away — otherwise it is a no-op. */
+#forgetlocal.armed { border-color: #a8402c; color: #a8402c; }
+@media (pointer: coarse) { .sidebar button { padding: 12px; font-size: 15px; } }
+
+main { flex: 1; padding: 20px 24px 60px; overflow-x: auto; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+.tabs button {
+  padding: 7px 15px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--panel); font-size: 13px; cursor: pointer; color: var(--muted);
+}
+.tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+/* Folded away the sidebar is 290px of the tablet back, which is most of a piece. */
+.tabs .collapse { font-size: 16px; line-height: 1; padding: 7px 12px; }
+body.sidebar-off .sidebar { display: none; }
+@media (pointer: coarse) {
+  .tabs button { padding: 12px 16px; font-size: 15px; }
+  .tabs .collapse { font-size: 20px; padding: 10px 16px; }
+}
+
+.side-group { margin-bottom: 30px; }
+.side-group h2 { font-size: 14px; text-transform: capitalize; display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.side-group h2 .muted { font-size: 12px; }
+.swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+
+.piece-grid, .sheets { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+
+.piece, .sheet {
+  margin: 0; padding: 10px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px;
+}
+.piece.empty { opacity: .5; }
+.piece.invalid { border-color: #c2543f; background: #fdf3f1; }
+.placeholder { width: 120px; height: 90px; display: grid; place-items: center; color: var(--muted); font-size: 22px; }
+/* The card is as wide as its row of boxes, which is wider than a narrow piece,
+   so the drawing is centred in it rather than left against the edge. */
+.piece svg, .piece .placeholder { display: block; margin-inline: auto; }
+
+figcaption { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; margin-top: 6px; }
+
+.edge-label { font-size: 9px; fill: var(--muted); text-anchor: middle; dominant-baseline: middle; }
+.guide { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; opacity: .75; }
+.guide-end { fill: var(--muted); opacity: .75; }
+.guide-label { font-size: 9px; fill: var(--muted); dominant-baseline: middle; font-style: italic; }
+.guide.off, .guide-end.off { stroke: #a8402c; }
+.guide-end.off { fill: #a8402c; }
+.guide-label.off { fill: #a8402c; font-weight: 700; }
+.right-angle { fill: none; stroke: #c0392b; stroke-width: 1.2; stroke-dasharray: 2 2; }
+.piece-num { font-size: 11px; font-weight: 600; fill: var(--ink); text-anchor: middle; dominant-baseline: middle; }
+.offcut { fill: #e9e6e0; stroke: var(--line); }
+.usable { fill: #fff; stroke: none; }
+/* Drawn last, over the pieces: with margin 0 the usable rect covers the sheet
+   rect completely, and the sheet has no visible edge at all without this. */
+.sheet-edge { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+
+.sheets { align-items: flex-start; }
+
+/* .sheets sets display:flex, which would otherwise beat the hidden attribute. */
+.panel[hidden] { display: none; }
+
+table.order { border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-width: 460px; }
+table.order th, table.order td { padding: 8px 14px; border-bottom: 1px solid var(--line); text-align: left; }
+table.order th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+table.order .num { text-align: right; }
+table.order tfoot td { font-weight: 600; border-bottom: none; background: #faf9f7; }
+
+/**
+ * Print the tab you are looking at and nothing else — the hidden panels stay
+ * hidden, and everything you would only click disappears.
+ */
+@media print {
+  .sidebar, .tabs, .plan-controls, table.offers, .ask-buttons, textarea, details,
+  .piece-card .edges, #warnings button { display: none !important; }
+  body { display: block; background: #fff; }
+  main { padding: 0; }
+  .panel { break-inside: auto; }
+  figure.sheet, .piece-card, .materials { break-inside: avoid; }
+  .materials { margin-top: 18px; }
+}
+
+/* Green while the measurements close into a real piece, red when they do not
+   and the drawing is the nearest that does. */
+.piece.closes { border-color: #4e8f5a; background: #f5faf6; }
+.piece.fitted { border-color: #c2543f; background: #fdf3f1; }
+.piece.fitted polygon { stroke-dasharray: 5 3; }
+.edge-label.changed { fill: #a8402c; font-weight: 700; }
+
+#warnings button {
+  padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--panel); font-size: 12px; cursor: pointer; margin: 4px 0;
+}
+#warnings summary { cursor: pointer; margin-top: 6px; }
+#warnings pre {
+  max-height: 200px; overflow: auto; background: #eceae5; padding: 8px;
+  border-radius: 4px; font-size: 10px; line-height: 1.4; user-select: all;
+}
+
+/* Measurements under the piece, two boxes to a row: left/top over right/bottom
+   for a four-sided piece, left/right over bottom for a three-sided one. */
+.piece-card { display: flex; flex-direction: column; }
+.edges {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 6px;
+  margin-top: 6px; padding: 0 2px;
+}
+.edges .edge { display: flex; align-items: center; gap: 4px; }
+.edges label { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; font-size: 10px; color: var(--muted); }
+.edges label span { flex: 0 0 40px; text-align: right; }
+.edges input {
+  width: 100%; min-width: 0; padding: 3px 4px; font-size: 11px;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink);
+}
+.edges input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* Big enough to hit with a thumb. The native spinner goes: two controls for the
+   same job, one of them invisible on a tablet, is worse than one that is not. */
+.edges input::-webkit-outer-spin-button, .edges input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.edges input[type='number'] { -moz-appearance: textfield; appearance: textfield; text-align: center; }
+.edges .step {
+  flex: 0 0 auto; width: 28px; height: 28px; padding: 0; line-height: 1;
+  font-size: 15px; font-weight: 600; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 5px; background: var(--panel);
+  cursor: pointer; touch-action: manipulation; user-select: none;
+}
+.edges .step:active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* A finger is not a mouse pointer: on a touch screen the rows go full width and
+   everything grows to the 44px Apple and Google both settle on. */
+@media (pointer: coarse) {
+  .edges { grid-template-columns: 1fr; gap: 8px; }
+  .edges label { font-size: 12px; gap: 8px; }
+  .edges label span { flex: 0 0 52px; }
+  .edges input { padding: 10px 6px; font-size: 17px; }
+  .edges .step { width: 44px; height: 44px; font-size: 20px; }
+}
+
+/* The roof seen from above. */
+.roof { position: relative; margin: 0; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: inline-block; }
+/* North is up in the drawing, so the rose sits still in the corner of the wrapper. */
+.roof .compass { position: absolute; top: 14px; right: 14px; color: var(--muted); pointer-events: none; }
+.roof-tools { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 78px 10px 0; font-size: 12px; color: var(--muted); }
+.roof-tools label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.roof .eaves li.off { opacity: .45; }
+.roof .compass text { font-size: 9px; font-weight: 600; fill: currentColor; }
+.roof .footprint { fill: none; stroke: var(--line); stroke-dasharray: 6 4; }
+.roof figcaption { flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 10px; }
+.eaves { display: flex; flex-wrap: wrap; gap: 14px; list-style: none; margin: 0; padding: 0; }
+.eaves li { display: flex; align-items: center; gap: 5px; text-transform: capitalize; }
+
+/* Lengths on the cut plan sit tighter than on a single piece — there is less
+   room between two pieces sharing a cut. */
+.sheet .edge-label { font-size: 7.5px; }
+
+/* Copy the prompt out, paste the arrangement back. */
+.ask { max-width: 760px; margin-bottom: 20px; }
+.ask h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; }
+.ask h2:first-child { margin-top: 0; }
+.ask button {
+  padding: 7px 12px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--panel); font-size: 13px; cursor: pointer;
+}
+.ask button:hover { border-color: var(--accent); }
+.ask-buttons { display: flex; gap: 8px; margin-top: 8px; }
+.ask textarea {
+  width: 100%; padding: 8px; font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+  border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--ink);
+}
+.ask pre {
+  max-height: 320px; overflow: auto; background: #eceae5; padding: 10px;
+  border-radius: 4px; font-size: 11px; line-height: 1.45; white-space: pre-wrap;
+}
+.ask summary { cursor: pointer; margin: 8px 0; }
+.ok { color: #3d7a4d; font-size: 13px; }
+
+/* Click a piece on the Roof tab to edit it. */
+.roof-piece { cursor: pointer; }
+/* The flag: grey until it is set, red after. The circle is the finger's target
+   and is invisible, so only the pennant is on the drawing. */
+.roof-flag { cursor: pointer; }
+.roof-flag .hit { fill: transparent; }
+.roof-flag path { fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linejoin: round; opacity: .55; }
+.roof-flag:hover path, .roof-flag:focus path { opacity: 1; }
+.roof-flag.on path { stroke: #c0392b; fill: #c0392b; opacity: 1; }
+.roof-flag:focus { outline: none; }
+.roof-piece:hover polygon, .roof-piece:focus polygon { fill-opacity: .55; stroke-width: 2; }
+.roof-piece:focus { outline: none; }
+
+#editor, #exporter, #importer {
+  border: 1px solid var(--line); border-radius: 8px; padding: 20px;
+  background: var(--panel); color: var(--ink); max-width: 420px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .18);
+}
+#editor::backdrop, #exporter::backdrop, #importer::backdrop { background: rgba(20, 22, 25, .45); }
+#editor h2 { margin: 0 0 12px; font-size: 15px; text-transform: capitalize; }
+#exporter h2, #importer h2 { margin: 0 0 6px; font-size: 15px; }
+#exporter textarea, #importer textarea {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 8px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--panel); color: var(--ink);
+}
+#editor h2 .muted { font-weight: 400; font-size: 13px; }
+#editor .piece { display: grid; place-items: center; min-height: 200px; margin: 0; }
+#editor .edges { margin-top: 12px; }
+/* Turning the piece over. Sized like the steppers, for the same finger. */
+.turns { display: flex; gap: 8px; margin-top: 12px; }
+.turns .turn {
+  flex: 1; padding: 8px; font-size: 16px; line-height: 1;
+  border: 1px solid var(--line); border-radius: 5px; background: var(--panel);
+  color: var(--ink); cursor: pointer; touch-action: manipulation;
+}
+.turns .turn:disabled { opacity: .35; cursor: default; }
+.turns .turn:active:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (pointer: coarse) { .turns .turn { padding: 13px; font-size: 20px; } }
+.editor-buttons { display: flex; gap: 8px; margin-top: 16px; }
+.editor-buttons button { flex: 1; }
+@media (pointer: coarse) { .editor-buttons button { padding: 12px; font-size: 16px; } }
+
+.plan-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 13px; }
+.plan-controls .muted, .plan-controls .ok { font-size: 12px; }
+
+.plan-controls .reduce { color: var(--muted); font-size: 12px; }
+.plan-controls .reduce input { width: 56px; padding: 3px 4px; font: inherit; }
+table.offers { border-collapse: collapse; font-size: 12px; margin-bottom: 16px; width: 100%; }
+table.offers tr { cursor: pointer; border-bottom: 1px solid var(--line); }
+table.offers tr:hover { background: var(--panel); }
+table.offers tr.chosen { background: var(--panel); font-weight: 600; }
+table.offers tr.chosen td:first-child { box-shadow: inset 3px 0 var(--muted); }
+table.offers td { padding: 5px 8px; }
+table.offers td.mix { color: var(--muted); font-weight: 400; }
+table.offers .tag { background: #a8402c; color: #fff; border-radius: 3px; padding: 1px 5px; font-size: 10px; white-space: nowrap; }
+
+.tabs .print { margin-left: auto; }
+.materials h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Roof Cut Planner</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="style.css?v=4" />
+    <!-- A tablet that saw this page before the no-cache rules went up is still
+         holding the old modules, and main.js alone being fresh gives you half a
+         page. The map moves every module to a URL nothing has cached; the
+         version only needs bumping if that ever happens again. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "./src/geometry.js": "./src/geometry.js?v=4",
+          "./src/roof.js": "./src/roof.js?v=4",
+          "./src/render.js": "./src/render.js?v=4",
+          "./src/nest.js": "./src/nest.js?v=4",
+          "./src/nest-blf.js": "./src/nest-blf.js?v=4",
+          "./src/aiplan.js": "./src/aiplan.js?v=4"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <aside class="sidebar" id="sidebar">
+      <h1>Roof Cut Planner</h1>
+      <p class="hint">
+        16&nbsp;mm multiwall polycarbonate. Flutes run down the slope, so pieces are
+        placed as-is or turned a half turn (&#8635;) — never a quarter turn, never mirrored.
+      </p>
+
+      <section>
+        <h2>Areas</h2>
+        <div id="summary"></div>
+      </section>
+
+      <section id="warnings"></section>
+
+      <section>
+        <h2>Data</h2>
+        <p class="hint">
+          Sheet prices are Axiome Clear 16&nbsp;mm from
+          <a href="https://clearambershop.com/products/axiome-clear-16mm-multiwall-polycarbonate-roofing-sheet">clearambershop</a>,
+          read 28 Aug 2026, inc VAT. Every size is &pound;20.20/m&sup2;, so offcut costs the same whatever you buy.
+        </p>
+        <p class="hint">
+          Type the measurements into the boxes under each piece and they save to
+          <code>data/cuts.json</code> as you leave the box — or edit the file, and the
+          drawing follows within a second. Saving to the file needs
+          <code>node serve.mjs</code>; anywhere else the measurements are kept in this
+          browser instead, and loaded back ahead of the file next time — &ldquo;Use the
+          file again&rdquo; throws that copy away.
+          A <b>green</b> border means the lengths close into a real piece, <b>red</b> that they
+          do not and the drawing is the nearest that does.
+          <b>All values are in cm</b>. Edges go clockwise from the
+          bottom-left corner and numbered from there: <code>[side 1, side 2, side 3, side 4]</code>
+          for 4 sides, <code>[side 1, side 2, side 3]</code> for 3. The last one is always the
+          base — the edge that sits on the eave.
+        </p>
+        <button id="reload" class="primary">Redraw now</button>
+        <button id="forgetlocal">Reset to the file</button>
+        <button id="export">Export</button>
+        <button id="import">Import</button>
+        <p class="hint" id="status"></p>
+        <p class="hint">
+          <a href="?">your roof</a> &middot;
+          <a href="?cuts=data/example-cuts.json">worked example</a>
+        </p>
+      </section>
+    </aside>
+
+    <main>
+      <nav class="tabs">
+        <button id="sidebar-toggle" class="collapse" aria-controls="sidebar" aria-expanded="true"
+                title="Hide the sidebar">&#9776;</button>
+        <button data-tab="pieces">Pieces</button>
+        <button data-tab="roof">Roof</button>
+        <button data-tab="cutplan">Cut plan</button>
+        <button data-tab="ai">Ask a model</button>
+        <button id="print" class="print">Print this tab</button>
+      </nav>
+      <div id="pieces" class="panel"></div>
+      <div id="roof" class="panel"></div>
+      <div id="cutplan" class="panel sheets"></div>
+      <div id="ai" class="panel"></div>
+    </main>
+
+    <!-- Native <dialog>, so Escape and the backdrop come for free. Edits are held
+         on a copy until OK, which is why Close can simply throw them away. -->
+    <dialog id="editor">
+      <form method="dialog">
+        <div id="editor-body"></div>
+        <div class="editor-buttons">
+          <button value="ok" class="primary">OK</button>
+          <button id="editor-close" value="cancel" formnovalidate autofocus>Close</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- The measurements out and back in, for moving them between a tablet that
+         can only keep them in its browser and the machine with the file on it.
+         What comes out is data/cuts.json exactly as it is written, so it can be
+         pasted over the file by hand. -->
+    <dialog id="exporter">
+      <form method="dialog">
+        <h2>Export</h2>
+        <p class="hint">
+          <code>data/cuts.json</code> as it stands here, ready to paste over the file.
+        </p>
+        <textarea id="export-text" readonly rows="10" spellcheck="false"></textarea>
+        <p class="hint" id="export-status"></p>
+        <div class="editor-buttons">
+          <button type="button" id="export-copy" class="primary">Copy</button>
+          <button type="button" id="export-whatsapp">Send to WhatsApp</button>
+          <button value="cancel" formnovalidate autofocus>Close</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="importer">
+      <form method="dialog">
+        <h2>Import</h2>
+        <p class="hint">
+          Paste a whole <code>cuts.json</code>. It replaces every measurement, and is
+          written to the file where the page can write it and kept in this browser where it cannot.
+        </p>
+        <textarea id="import-text" rows="10" spellcheck="false" autocapitalize="off"
+                  autocorrect="off" placeholder="{ &quot;note&quot;: …, &quot;cuts&quot;: { … } }"></textarea>
+        <p class="hint" id="import-status"></p>
+        <div class="editor-buttons">
+          <button type="button" id="import-go" class="primary">Import</button>
+          <button value="cancel" formnovalidate autofocus>Close</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="src/main.js?v=4"></script>
+  </body>
+</html>
