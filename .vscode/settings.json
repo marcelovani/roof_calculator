@@ -1,0 +1,14 @@
+{
+  // Format on save is off because there is nothing here to format with. Left
+  // on, VS Code reaches for whichever formatter is installed and rewrites files
+  // to that formatter's taste — it re-padded the sheet-size table in Readme.md
+  // and un-indented a wrapped line under a numbered list, neither of which
+  // anyone asked for, and both of which turn up as noise in the next diff.
+  //
+  // The layout rules that do exist are in .editorconfig, and VS Code applies
+  // them on its own.
+  "editor.formatOnSave": false,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.eol": "\n"
+}

@@ -1,0 +1,18 @@
+# What every file here is already written as, said out loud so an editor stops
+# guessing. There is no formatter in this project — no package.json, no lint
+# step, nothing to install — so this and the workspace settings beside it are
+# the whole of the rules.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdown leans on trailing spaces for a hard line break, so they stay.
+[*.md]
+trim_trailing_whitespace = false
