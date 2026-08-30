@@ -19,7 +19,7 @@ import { area, bbox, normalise, rotate180, translate } from './geometry.js';
 const round = (n) => Math.round(n * 10) / 10;
 
 /** The pieces as coordinates, which is what an arrangement has to be made of. */
-function pieceFacts(pieces) {
+export function pieceList(pieces) {
   return pieces
     .filter((p) => p.vertices)
     .map((p) => {
@@ -31,11 +31,38 @@ function pieceFacts(pieces) {
     .join('\n');
 }
 
-export function promptFor(pieces, config) {
-  const sheets = (config.sheets || [])
+/** The catalogue as the model needs to see it. */
+export function sheetList(config) {
+  return (config.sheets || [])
     .map((s) => `  ${s.id}: ${s.width} x ${s.length}${s.price != null ? `, £${s.price}` : ''}`)
     .join('\n');
+}
 
+/**
+ * The lists put back into the prompt that names them.
+ *
+ * A token nobody has a value for is left standing rather than blanked: a prompt
+ * still asking for `[pieces]` is a prompt whose pieces went missing, and that is
+ * worth seeing rather than hiding.
+ */
+export function fillPrompt(template, parts) {
+  return template.replace(/\[(sheets|pieces|plan)\]/g, (whole, key) => (key in parts ? parts[key] : whole));
+}
+
+/** The whole thing, lists and all — what a copy of the prompt amounts to. */
+export function promptFor(pieces, config, plan = '') {
+  return fillPrompt(promptTemplate(config), { sheets: sheetList(config), pieces: pieceList(pieces), plan }).trimEnd();
+}
+
+/**
+ * The prompt with a hole where each list goes.
+ *
+ * The catalogue runs to fifty lines and the pieces to thirty, and between them
+ * they bury the eight lines of rules that are the part worth reading. So each
+ * list gets a box of its own on the page and the prompt keeps a `[token]` where
+ * it belongs — which also says plainly where each box is used.
+ */
+export function promptTemplate(config) {
   return `Arrange these polycarbonate pieces on as little sheet as possible.
 
 Everything is in centimetres, x across the sheet and y along it, measured from
@@ -46,15 +73,14 @@ Rules, all of them hard:
   turns and no mirroring: the flutes must run along the length of the sheet and
   the UV face must stay up.
 - Pieces may not overlap and may not cross the edge of a sheet.
-- Leave ${config.kerf || 0} cm between pieces for the saw cut${config.margin ? `, and ${config.margin} cm unused at the sheet edge` : ''}.
-- Every piece must be placed exactly once.
+${config.margin ? `- Leave ${config.margin} cm unused at the sheet edge.\n` : ''}- Every piece must be placed exactly once.
 - Sheets may be used more than once; you pay for each one you use.
 
 Sheets available (id: width x length, price):
-${sheets}
+[sheets]
 
 Pieces (id: bounding box, area, corners anticlockwise from the bottom-left):
-${pieceFacts(pieces)}
+[pieces]
 
 The corners are the piece as it stands. If you turn a piece, turn it about its
 own centre; x and y are then where the bottom-left corner of its bounding box
@@ -71,9 +97,12 @@ Answer with JSON and nothing else:
 
 Cheapest total wins. Say nothing else — the answer is read by a machine.
 
-If an arrangement in that same format follows this, it is the one the nester
-already found. Every piece in it is placed legally, so it is a floor and not a
-suggestion: beat it on total price, or return it unchanged if you cannot.`;
+Anything below this line is the arrangement the nester already found. Every
+piece in it is placed legally, so it is a floor and not a suggestion: beat it on
+total price, or return it unchanged if you cannot. If nothing follows it, there
+is no floor and you are starting from nothing.
+
+[plan]`;
 }
 
 /** Convex polygons, so a separating axis settles it. */

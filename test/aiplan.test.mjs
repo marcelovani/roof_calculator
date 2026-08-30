@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { buildPolygon } from '../src/geometry.js';
-import { planJson, promptFor, readPlan } from '../src/aiplan.js';
+import { fillPrompt, pieceList, planJson, promptFor, promptTemplate, readPlan, sheetList } from '../src/aiplan.js';
 import { plan } from '../src/nest.js';
 
 const piece = (id) => ({ id, side: 'west', edges: [100, 100, 100, 100], vertices: buildPolygon([100, 100, 100, 100]).vertices });
@@ -86,4 +86,19 @@ test('a half turn survives being written out, whichever nester labelled it', () 
   assert.equal(JSON.parse(planJson(asSheet(180))).sheets[0].pieces[0].orientation, 180);
   assert.equal(JSON.parse(planJson(asSheet(1))).sheets[0].pieces[0].orientation, 180);
   assert.equal(JSON.parse(planJson(asSheet(0))).sheets[0].pieces[0].orientation, 0);
+});
+
+test('the prompt names each list where it goes, and takes it back', () => {
+  const template = promptTemplate(config);
+  assert.deepEqual(template.match(/\[(sheets|pieces|plan)\]/g), ['[sheets]', '[pieces]', '[plan]']);
+
+  const filled = fillPrompt(template, { sheets: sheetList(config), pieces: pieceList(pieces), plan: '{}' });
+  assert.equal(filled.match(/\[(sheets|pieces|plan)\]/g), null);
+  assert.match(filled, /big: 210 x 250/);
+  assert.match(filled, /^ {2}1 \(west\)/m);
+  assert.match(filled, /\{\}$/);
+});
+
+test('a list nobody supplied leaves its token standing rather than a hole', () => {
+  assert.match(fillPrompt('take [sheets] and [pieces]', { sheets: 'these' }), /take these and \[pieces\]/);
 });
