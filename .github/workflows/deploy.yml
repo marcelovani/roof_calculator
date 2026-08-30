@@ -32,6 +32,10 @@ jobs:
 
       - name: Take the deploy key
         run: |
+          if [ -z "${{ secrets.SSH_KEY }}" ]; then
+            echo "::error::SSH_KEY is not set. Add the deploy key's *private* half as a repository secret."
+            exit 1
+          fi
           mkdir -p ~/.ssh
           printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
