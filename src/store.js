@@ -119,6 +119,11 @@ export function fromDefaults(cutsDoc, sheetsDoc, name = 'My roof') {
       // hold them all: a size added later should be in the plan, not left out
       // because it was not around when the boxes were last ticked.
       sheetPicks: null,
+      // How much wider than the sheet a run of pieces may come out, in cm. It
+      // is kept here rather than with the catalogue because it is a property of
+      // the job — how straight you can cut — not of what the shop sells. The
+      // file's number is only where a browser that has never been here starts.
+      allowance: Number(sheetsDoc.allowance) || 0,
       pastedPlan: '',
       pastedDraft: '',
     },

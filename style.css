@@ -297,8 +297,8 @@ table.order tfoot td { font-weight: 600; border-bottom: none; background: #faf9f
 .plan-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 13px; }
 .plan-controls .muted, .plan-controls .ok { font-size: 12px; }
 
-.plan-controls .reduce { color: var(--muted); font-size: 12px; }
-.plan-controls .reduce input { width: 56px; padding: 3px 4px; font: inherit; }
+.plan-controls .reduce, .plan-controls .tolerance { color: var(--muted); font-size: 12px; }
+.plan-controls .reduce input, .plan-controls .tolerance input { width: 56px; padding: 3px 4px; font: inherit; }
 table.offers { border-collapse: collapse; font-size: 12px; margin-bottom: 16px; width: 100%; }
 table.offers tr { cursor: pointer; border-bottom: 1px solid var(--line); }
 table.offers tr:hover { background: var(--panel); }
