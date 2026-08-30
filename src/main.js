@@ -1,6 +1,6 @@
 import { OPS, area, buildRelaxed, compose, fitPolygon, isPlain, orient } from './geometry.js';
 import { plan } from './nest.js';
-import { createSearch } from './nest-blf.js';
+import { createSearch, shrinkPieces } from './nest-blf.js';
 import { promptFor, readPlan } from './aiplan.js';
 import * as store from './store.js';
 import { EDGE_NAMES, renderCutPlan, renderOrder, renderPieceEditor, renderPiecePreview, renderPieces, renderDesigns, renderRoof, renderSheetPicker, renderSheets, sqm } from './render.js';
@@ -336,7 +336,11 @@ function draw() {
   const nestable = pieces.filter((p) => p.vertices);
   const sig = signature(nestable, data.sheets);
   if (sig !== state.opt.sig) resetSearches(sig);
-  const fast = plan(nestable, data);
+  // The trial slack is part of the plan on the screen, not only of a search:
+  // the box that asks for it is the answer to "nothing ticked fits these
+  // pieces", and an answer that changed nothing below it would be no answer.
+  const cut = shrinkPieces(nestable, state.opt.reduce);
+  const fast = plan(cut, data);
   const result = state.opt.plan || fast;
 
   $('#pieces').innerHTML = renderPieces(pieces, problems, data.units, state.showFitted);
@@ -430,8 +434,14 @@ function planControls(fast, result = fast) {
        ${(result.sheets || []).length ? 'rest' : 'others'} only, so it is not what the roof costs.
        Pieces ${unplaced.join(', ')}.</p>`
     : '';
-  if (!fast.sheets.length) return picker + nowhere;
   const { active, chosen, reduce } = state.opt;
+  // Only worth a box when something does not fit — or when it already holds a
+  // number, which is the only way back to nought.
+  const reducer = unplaced.length || reduce
+    ? `<label class="reduce">every piece
+        <input id="reduce" type="number" step="0.5" min="0" value="${esc(reduce)}"${active ? ' disabled' : ''}> cm smaller</label>`
+    : '';
+  if (!fast.sheets.length) return `${picker}${nowhere}${reducer ? `<div class="plan-controls">${reducer}</div>` : ''}`;
   const rows = offers();
   const status = active
     ? `<span class="muted">round ${active.round} &middot; ${active.sheets} sheets &middot; &pound;${active.cost.toFixed(2)}</span>`
@@ -455,17 +465,19 @@ function planControls(fast, result = fast) {
         .join('')}</tbody></table>`
     : '';
 
-  const trialWarning = rows.some((r) => r.shrink && state.opt.chosen === r.id)
-    ? `<p class="hint bad">This plan is drawn from pieces ${fmt1(rows.find((r) => r.id === state.opt.chosen).shrink)} cm
-       narrower and ${fmt1(rows.find((r) => r.id === state.opt.chosen).shrink)} cm shorter than you measured, so its
+  // A shrunk plan is a smaller roof whichever nester made it, so the warning
+  // follows the slack rather than the search that used it.
+  const shrunkBy = state.opt.plan ? rows.find((r) => r.id === chosen)?.shrink || 0 : reduce;
+  const trialWarning = shrunkBy
+    ? `<p class="hint bad">This plan is drawn from pieces ${fmt1(shrunkBy)} cm
+       narrower and ${fmt1(shrunkBy)} cm shorter than you measured, so its
        price is not one you can order. It is here to say what that much slack would be worth.</p>`
     : '';
 
   // One button, three jobs: start, stop, start again. Starting again adds to the
   // list rather than replacing it, which is what "more" is saying.
   return `${picker}${nowhere}<div class="plan-controls">
-    <label class="reduce">every piece
-      <input id="reduce" type="number" step="0.5" min="0" value="${esc(reduce)}"${active ? ' disabled' : ''}> cm smaller</label>
+    ${reducer}
     <button id="optimise">${active ? 'Stop' : rows.length ? 'Optimise more' : 'Optimise'}</button>
     ${state.opt.plan ? '<button id="dropoptimise">Back to the quick plan</button>' : ''}
     ${rows.length ? '<button id="clearsearches">Clear results</button>' : ''}
@@ -485,8 +497,15 @@ function wireOptimise(nestable, fast) {
   const ROUNDS = 500;
   const opt = state.opt;
 
+  // Redrawn rather than stored and forgotten: the plan below is nested from the
+  // shrunk pieces, so the number has to take effect where it is typed. The
+  // redraw replaces the box, so the caret is put back where it was.
   $('#reduce')?.addEventListener('change', (event) => {
-    opt.reduce = Math.max(0, Number(event.target.value) || 0);
+    const next = Math.max(0, Number(event.target.value) || 0);
+    if (next === opt.reduce) return;
+    opt.reduce = next;
+    draw();
+    $('#reduce')?.focus();
   });
 
   $('#clearsearches')?.addEventListener('click', () => {
@@ -572,7 +591,9 @@ function wireOptimise(nestable, fast) {
       draw();
       return;
     }
-    opt.reduce = Math.max(0, Number($('#reduce').value) || 0);
+    // The box is only on the page when something needs shrinking; without it
+    // the slack is nought and the search is on the pieces as measured.
+    opt.reduce = Math.max(0, Number($('#reduce')?.value) || 0);
     start(opt.reduce);
   });
 }

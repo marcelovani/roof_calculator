@@ -205,6 +205,23 @@ function mixOf(sheets) {
   return [...counts.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([id, n]) => `${id} \u00d7${n}`).join(', ');
 }
 
+/**
+ * Every piece with `by` cm off its width and its height.
+ *
+ * The search shrinks inside itself; the quick nester is handed pieces that are
+ * already smaller, so both are cutting the same trial shape and the plan on the
+ * screen answers the question the box above it asks.
+ */
+export function shrinkPieces(pieces, by) {
+  if (!by) return pieces;
+  return pieces.map((piece) => {
+    const flat = shrinkShape(normalise(piece.vertices), by);
+    // Drawn smaller, so labelled smaller too, and `fitted` goes with the
+    // lengths it belonged to — see the note in createSearch.
+    return { ...piece, vertices: flat, edges: edgesOf(flat), fitted: null };
+  });
+}
+
 const TOP = 10;
 
 /**
