@@ -25,7 +25,9 @@ import { area, bbox, normalise, rotate180, translate } from './geometry.js';
  */
 const PRECISION = 0.1;
 
-const round = (n) => Math.round(n / PRECISION) * PRECISION;
+// Multiplying back by a tenth reintroduces the float noise the rounding just
+// took out — 70.6 comes back as 70.60000000000001 — so it is trimmed off again.
+const round = (n) => Number((Math.round(n / PRECISION) * PRECISION).toFixed(6));
 
 /** The pieces as coordinates, which is what an arrangement has to be made of. */
 export function pieceList(pieces) {
@@ -108,12 +110,11 @@ sits on the sheet.
 
 Answer with JSON and nothing else:
 
-{"sheets": [
-  {"sheet": "690x2500mm", "pieces": [
-    {"id": "3", "orientation": 0, "x": 0, "y": 0},
-    {"id": "4", "orientation": 180, "x": 0, "y": 232}
-  ]}
+{"sheets":[
+{"sheet":"690x2500mm","pieces":[{"id":"3","orientation":0,"x":0,"y":0},{"id":"4","orientation":180,"x":0,"y":232}]}
 ]}
+
+A line per sheet, no indentation. Nothing is gained by pretty-printing it.
 
 Cheapest total wins. Say nothing else — the answer is read by a machine.
 
@@ -269,5 +270,8 @@ export function planJson(result) {
       }),
     ),
   }));
-  return JSON.stringify({ sheets }, null, 2);
+  // A line per sheet: still readable down the page, and a third of the size of
+  // the same thing indented. The plan is the part of the prompt that grows with
+  // the roof, so it is the part worth keeping tight.
+  return `{"sheets":[\n${sheets.map((s) => JSON.stringify(s)).join(',\n')}\n]}`;
 }

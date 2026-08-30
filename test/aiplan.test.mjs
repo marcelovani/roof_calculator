@@ -131,3 +131,11 @@ test('a plan survives its own rounding — the millimetre it is written at', () 
   const clashing = JSON.stringify({ sheets: [{ sheet: 'big', pieces: [at('1', 0, 0), at('2', 99, 0)] }] });
   assert.match(readPlan(clashing, pieces, config).problems.join(' '), /1 and 2 overlap/);
 });
+
+test('a written-out position is a plain number, not the float that made it', () => {
+  const piece = { id: 'p', side: 'north', vertices: buildPolygon([100, 100, 100, 100]).vertices };
+  const at706 = {
+    sheets: [{ sheet: config.sheets[0], placements: [{ x: 70.6, y: 0, block: { placements: [{ piece, orientation: 0, vertices: piece.vertices }] } }] }],
+  };
+  assert.match(planJson(at706), /"x":70\.6,/);
+});
