@@ -1,7 +1,7 @@
 import { OPS, area, buildRelaxed, compose, fitPolygon, isPlain, orient } from './geometry.js';
 import { plan } from './nest.js';
 import { createSearch, shrinkPieces } from './nest-blf.js';
-import { promptFor, readPlan } from './aiplan.js';
+import { planJson, promptFor, readPlan } from './aiplan.js';
 import * as store from './store.js';
 import { EDGE_NAMES, renderCutPlan, renderOrder, renderPieceEditor, renderPiecePreview, renderPieces, renderDesigns, renderRoof, renderSheetPicker, renderSheets, sqm } from './render.js';
 
@@ -481,6 +481,7 @@ function planControls(fast, result = fast) {
     <button id="optimise">${active ? 'Stop' : rows.length ? 'Optimise more' : 'Optimise'}</button>
     ${state.opt.plan ? '<button id="dropoptimise">Back to the quick plan</button>' : ''}
     ${rows.length ? '<button id="clearsearches">Clear results</button>' : ''}
+    <button id="exportplan" title="Put this arrangement on the AI tab, and on the clipboard">Export to AI</button>
     ${status}
   </div>${list}${trialWarning}`;
 }
@@ -511,6 +512,18 @@ function wireOptimise(nestable, fast) {
   $('#clearsearches')?.addEventListener('click', () => {
     resetSearches(opt.sig);
     draw();
+  });
+
+  // The plan on the screen, in the same JSON a pasted answer comes back as. The
+  // clipboard can refuse — the published copy is plain http — so the AI tab
+  // holds it as well, and that is where the button leaves you.
+  $('#exportplan')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(planJson(opt.plan || fast));
+    } catch {
+      /* no clipboard here; the box on the AI tab is the fallback */
+    }
+    showTab('ai');
   });
 
   $('#dropoptimise')?.addEventListener('click', () => {
@@ -606,6 +619,10 @@ function drawAsk(pieces, ours) {
   const data = state.data;
   const mine = state.pasted ? readPlan(state.pasted, pieces, data) : { sheets: [], problems: [], cost: 0 };
   const drawable = pieces.filter((p) => p.vertices).length;
+  // A shrunk plan is of a smaller roof, so its coordinates do not fit the pieces
+  // as measured. Worth saying next to the box rather than letting it be pasted
+  // back and reported as overlapping.
+  const shrunk = state.opt.plan ? offers().find((r) => r.id === state.opt.chosen)?.shrink || 0 : state.opt.reduce;
 
   const verdict = !state.pasted
     ? ''
@@ -624,10 +641,19 @@ function drawAsk(pieces, ours) {
     <h2>1. Give a model the pieces</h2>
     <p class="hint">${drawable} pieces, ${(data.sheets || []).length} sheet sizes, the rules the nester works
       under. Paste it into Claude, or anything else, and ask for the arrangement.</p>
-    <button id="copyprompt">Copy the prompt</button>
-    <details><summary class="hint">Read it first</summary><pre id="prompt">${escapeHtml(promptFor(pieces, data))}</pre></details>
+    <textarea id="prompt" class="long" rows="14" spellcheck="false" readonly>${escapeHtml(promptFor(pieces, data))}</textarea>
+    <div class="ask-buttons"><button id="copyprompt">Copy the prompt</button></div>
 
-    <h2>2. Paste what comes back</h2>
+    <h2>2. And the plan you have now, if you want it beaten</h2>
+    <p class="hint">The arrangement on the cut plan, in the same JSON an answer comes back as${
+      shrunk ? `, <b>but drawn from pieces ${fmt1(shrunk)} cm smaller than you measured</b>` : ''} —
+      hand it over with the prompt and ask for fewer sheets than this. Leave it out and the model starts from nothing.
+      This box follows whichever plan is chosen on the cut plan, so it cannot go stale;
+      Export to AI over there copies it and brings you here.</p>
+    <textarea id="planout" class="long" rows="10" spellcheck="false" readonly>${escapeHtml(planJson(ours))}</textarea>
+    <div class="ask-buttons"><button id="copyplan">Copy the plan</button></div>
+
+    <h2>3. Paste what comes back</h2>
     <p class="hint">Checked against the same rules before anything is drawn: inside the sheet, no
       overlaps, every piece placed once, half turns only. Nothing is saved to your measurements.</p>
     <textarea id="pasted" rows="6" spellcheck="false" placeholder='{"sheets": [ ... ]}'>${escapeHtml(state.draft)}</textarea>
@@ -637,10 +663,19 @@ function drawAsk(pieces, ours) {
   </section>
   ${state.pasted && mine.sheets.length ? `<div class="sheets">${renderCutPlan(mine, data)}</div>${materials(mine, data)}` : ''}`;
 
-  $('#copyprompt').addEventListener('click', async (event) => {
-    await navigator.clipboard.writeText(promptFor(pieces, data));
+  const copyBox = async (id, event) => {
+    const box = $(`#${id}`);
+    try {
+      await navigator.clipboard.writeText(box.value);
+    } catch {
+      // Plain http has no clipboard API, so fall back to selecting the text.
+      box.select();
+      document.execCommand('copy');
+    }
     event.target.textContent = 'Copied';
-  });
+  };
+  $('#copyprompt').addEventListener('click', (event) => copyBox('prompt', event));
+  $('#copyplan').addEventListener('click', (event) => copyBox('planout', event));
   $('#pasted').addEventListener('input', (event) => {
     state.draft = event.target.value;
     setSetting('pastedDraft', state.draft);

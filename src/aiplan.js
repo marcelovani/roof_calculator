@@ -171,3 +171,25 @@ export function readPlan(text, pieces, config) {
   const cost = sheets.reduce((sum, s) => sum + (s.sheet.price != null ? s.sheet.price : 0), 0);
   return { sheets, leftovers: [], cost, problems, blocks: [] };
 }
+
+/**
+ * A plan written back out in the shape readPlan reads in.
+ *
+ * The nester keeps its pieces inside blocks, and a block sits at an offset on
+ * the sheet, so the coordinates on the screen are the two added together. A
+ * model has no use for the blocks — they are how the nester thinks, not part of
+ * the arrangement — so they are flattened away here and every piece is given
+ * where its bounding box sits on the sheet.
+ */
+export function planJson(result) {
+  const sheets = (result.sheets || []).map((s) => ({
+    sheet: s.sheet.id,
+    pieces: s.placements.flatMap((slot) =>
+      slot.block.placements.map((p) => {
+        const box = bbox(translate(p.vertices, slot.x, slot.y));
+        return { id: p.piece.id, orientation: p.orientation === 180 ? 180 : 0, x: round(box.minX), y: round(box.minY) };
+      }),
+    ),
+  }));
+  return JSON.stringify({ sheets }, null, 2);
+}
