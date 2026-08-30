@@ -11,11 +11,40 @@
  * at one roof with another one's flags on it.
  */
 export const KEY = 'roof';
-export const VERSION = 1;
+export const VERSION = 2;
 
 /** Short, and unique enough for a list one person keeps by hand. */
 export const newId = () =>
   `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`.slice(-10);
+
+/**
+ * Sides used to be listed anticlockwise from the bottom-right corner, so the
+ * numbers ran round the drawing the opposite way from the way they are walked
+ * now — clockwise from the bottom-left. The lengths are the same lengths; only
+ * their order changed, and sides 1 and 3 swap places to turn one into the other
+ * (sides 1 and 2 on a triangle, where the base is the third).
+ *
+ * Anything already in the browser was typed in the old order, so it is turned
+ * round once, on the way in.
+ */
+const clockwiseFromLeft = (edges) => {
+  const e = [...edges];
+  if (e.length === 4) return [e[2], e[1], e[0], e[3]];
+  if (e.length === 3) return [e[1], e[0], e[2]];
+  return e;
+};
+
+/** A store written before the sides were renumbered, brought up to date. */
+export function upgrade(store) {
+  if (!store || Number(store.version) >= 2) return store;
+  for (const design of Object.values(store.designs || {})) {
+    for (const cut of Object.values(design.cuts || {})) {
+      if (Array.isArray(cut.edges)) cut.edges = clockwiseFromLeft(cut.edges);
+    }
+  }
+  store.version = VERSION;
+  return store;
+}
 
 export function read() {
   let text;
@@ -27,7 +56,7 @@ export function read() {
   if (!text) return null;
   try {
     const store = JSON.parse(text);
-    return store && store.designs ? store : null;
+    return store && store.designs ? upgrade(store) : null;
   } catch {
     // Corrupt beyond use. Saying so and starting again beats a blank page.
     return null;
@@ -123,7 +152,12 @@ export function migrate(cutsDoc, sheetsDoc, cutsPath = 'data/cuts.json') {
   }
   if (!doc || !doc.cuts) return null;
 
+  // The old per-key store predates the renumbering, so its edges are turned
+  // round too. `fromDefaults` has already stamped the current version on it.
   const store = fromDefaults(doc, sheetsDoc, 'My roof');
+  for (const cut of Object.values(store.designs[store.current].cuts)) {
+    if (Array.isArray(cut.edges)) cut.edges = clockwiseFromLeft(cut.edges);
+  }
   const design = store.designs[store.current];
   design.flags = (get(`roof.flags:${cutsPath}`) || '').split(',').filter(Boolean);
   store.settings.hiddenSides = (get('roof.hiddenSides') || '').split(',').filter(Boolean);

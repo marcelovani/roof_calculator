@@ -1,11 +1,11 @@
 /**
  * Edge lists -> polygon vertices.
  *
- * Edges are given clockwise starting at the bottom-left corner, so the last
- * edge is always the base:
+ * Edges are given clockwise starting at the bottom-left corner, so the first
+ * edge is the left-hand one on the page and the last is always the base:
  *
- *   4 sides: [side 1, side 2, side 3, side 4]
- *   3 sides: [side 1, side 2, side 3]
+ *   4 sides: [side 1, side 2, side 3, side 4] — left, top, right, base
+ *   3 sides: [side 1, side 2, side 3] — left, right, base
  *
  * The last of them is the base — the edge that sits on the eave.
  *
@@ -15,24 +15,13 @@
  * Vertices come back in maths coordinates (y up) with the base on y = 0 and
  * the bottom-left corner at the origin.
  *
- * The sheets are laid the other way up from the way they were measured, so the
- * piece on the page is the mirror of the piece the numbers walk around. The
- * numbers themselves are untouched — the list still starts at side 1 and still
- * runs clockwise — but it runs clockwise around the flipped piece, which puts
- * its first side on the right of the drawing. `asDrawn` is that flip, and it is
- * the only place it happens: apply it to a list of lengths and you have the
- * same list in the order the drawing walks its corners — left, top, right, base.
- *
- * Shifting the walk on a corner was tried and is wrong, however tempting it
- * looks: it closes all 28 pieces as exact trapezoids instead of 12, but only by
- * standing each one on its long edge — 238 cm across a sheet 69 cm wide. The
- * last side is the base because the base is what sits on the eave.
- *
- * It is its own inverse, which is why the same function takes a list back the
- * other way.
+ * The order the numbers are entered in is the order the drawing walks its
+ * corners, so side 1 is drawn where side 1 was measured. Shifting the walk on a
+ * corner was tried and is wrong, however tempting it looks: it closes all 28
+ * pieces as exact trapezoids instead of 12, but only by standing each one on
+ * its long edge — 238 cm across a sheet 69 cm wide. The last side is the base
+ * because the base is what sits on the eave.
  */
-export const asDrawn = (list) =>
-  list.length === 4 ? [list[2], list[1], list[0], list[3]] : [list[1], list[0], list[2]];
 
 const EPS = 1e-6;
 
@@ -51,9 +40,7 @@ function triangle([a, b, c]) {
  * Bottom-left, top-left, top-right, bottom-right from [left, top, right, bottom]
  * as they fall on the page, assuming top is parallel to bottom.
  *
- * That is `asDrawn` order, so `l` here is the length entered as the right-hand
- * edge and `r` the one entered as the left. The errors are worded the way they
- * were entered, since that is what there is to go and correct.
+ * That is the order the sides are entered in, so `l` is side 1 and `b` side 4.
  *
  * With P1 = (x, h) and P2 = (x + t, h), the two edge-length equations reduce to
  * x = ((b - t)^2 + l^2 - r^2) / (2 (b - t)). When b == t the shape is a
@@ -65,7 +52,7 @@ function quad([l, t, r, b]) {
   let x;
   if (Math.abs(d) < EPS) {
     if (Math.abs(l - r) > Math.max(EPS, 1e-3 * l)) {
-      return { error: `Side 2 and side 4 are both ${b} but sides 1 and 3 differ (${r} vs ${l}), so they cannot be parallel.` };
+      return { error: `Side 2 and side 4 are both ${b} but sides 1 and 3 differ (${l} vs ${r}), so they cannot be parallel.` };
     }
     x = 0;
   } else {
@@ -73,7 +60,7 @@ function quad([l, t, r, b]) {
   }
   const hSq = l * l - x * x;
   if (hSq <= EPS) {
-    return { error: `No trapezoid closes with these edges (side 1 ${r}, side 2 ${t}, side 3 ${l}, side 4 ${b}).` };
+    return { error: `No trapezoid closes with these edges (side 1 ${l}, side 2 ${t}, side 3 ${r}, side 4 ${b}).` };
   }
   const h = Math.sqrt(hSq);
   return { vertices: [pt(0, 0), pt(x, h), pt(x + t, h), pt(b, 0)] };
@@ -84,8 +71,8 @@ export function buildPolygon(edges) {
   const nums = edges.map(Number);
   if (nums.some((n) => !Number.isFinite(n))) return { error: 'Edges must all be numbers.' };
   if (nums.every((n) => n === 0)) return { empty: true };
-  if (nums.length === 3) return triangle(asDrawn(nums));
-  if (nums.length === 4) return quad(asDrawn(nums));
+  if (nums.length === 3) return triangle(nums);
+  if (nums.length === 4) return quad(nums);
   return { error: `${nums.length} edges given; only 3 or 4 are supported.` };
 }
 
@@ -277,8 +264,8 @@ export function spanAt(vertices, y) {
  * error in the measuring shows up as the right edge leaning off vertical
  * rather than as a shape that cannot be drawn at all.
  *
- * Takes `asDrawn` order, like `quad`: the right angle is at the first edge as
- * entered, which is the right-hand one on the page.
+ * Takes the same order as `quad`: the right angle is between side 4 and side 1,
+ * the base and the left-hand edge on the page.
  */
 function squareCorner([l, t, r, b]) {
   if (l <= 0 || t <= 0 || r <= 0 || b <= 0) return { error: 'Edges must be greater than zero.' };
@@ -299,7 +286,7 @@ function squareCorner([l, t, r, b]) {
   const c2 = pt(px + h * uy, py - h * ux);
   const corner = c1.x >= c2.x ? c1 : c2;
   if (corner.x <= EPS || corner.y <= EPS) {
-    return { error: `No piece closes with these edges (side 1 ${r}, side 2 ${t}, side 3 ${l}, side 4 ${b}).` };
+    return { error: `No piece closes with these edges (side 1 ${l}, side 2 ${t}, side 3 ${r}, side 4 ${b}).` };
   }
   return { vertices: [pt(0, 0), pt(0, l), corner, pt(b, 0)] };
 }
@@ -354,14 +341,11 @@ export function fitPolygon(edges) {
   const nums = (Array.isArray(edges) ? edges : []).map(Number);
   if (!nums.length || nums.some((n) => !Number.isFinite(n)) || nums.every((n) => n === 0)) return null;
 
-  // Which edge is the top and which the base is a fact about the drawing, so
-  // the fitting is done there and the answer handed back in the order it came.
-  const drawn = asDrawn(nums);
   const candidates = [];
   if (nums.length === 3) {
-    candidates.push(fitTriple(drawn));
+    candidates.push(fitTriple(nums));
   } else if (nums.length === 4) {
-    const [l, t, r, b] = drawn;
+    const [l, t, r, b] = nums;
     candidates.push([l, Math.hypot(b, l - r), r, b]);
     const gap = Math.abs(b - t);
     const [left, right, newGap] = fitTriple([l, r, gap]);
@@ -373,12 +357,11 @@ export function fitPolygon(edges) {
     return null;
   }
 
-  for (const candidate of candidates.sort((a, b) => distance(a, drawn) - distance(b, drawn))) {
+  for (const candidate of candidates.sort((a, b) => distance(a, nums) - distance(b, nums))) {
     for (const tidy of [candidate.map(round1), candidate]) {
       if (tidy.some((n) => n <= 0)) continue;
-      const entered = asDrawn(tidy);
-      const result = buildRelaxed(entered);
-      if (result.vertices) return { edges: entered, vertices: result.vertices };
+      const result = buildRelaxed(tidy);
+      if (result.vertices) return { edges: tidy, vertices: result.vertices };
     }
   }
   return null;
@@ -396,7 +379,7 @@ export function buildRelaxed(edges) {
 
   const nums = edges.map(Number);
   if (nums.length === 4) {
-    const hip = squareCorner(asDrawn(nums));
+    const hip = squareCorner(nums);
     if (hip.vertices) return { ...hip, model: 'hip' };
   }
   return { ...exact, model: null };
@@ -443,6 +426,5 @@ export function widthGuide(vertices, edges) {
   const width = Math.hypot(from.x - foot.x, from.y - foot.y);
   if (width < EPS) return null;
 
-  const drawn = asDrawn(nums);
-  return { from, to: foot, width, target: drawn[drawn.length - 1] };
+  return { from, to: foot, width, target: nums[nums.length - 1] };
 }
