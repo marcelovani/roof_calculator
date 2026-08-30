@@ -828,11 +828,12 @@ async function runImport() {
 }
 
 /**
- * A design: opening one, renaming it, throwing it away.
+ * A design: renaming it, throwing it away.
  *
- * Open leads, because it is what you came to the list for. Nothing is a copy
- * here — a design is switched or renamed in place — so the dialog acts at once
- * and closes.
+ * Opening one is on the row itself, where you are already looking, so this is
+ * only the two things that need a name typed or a confirmation. Nothing is a
+ * copy here — a design is renamed in place — so the dialog acts at once and
+ * closes.
  */
 function openDesign(id) {
   const design = state.store.designs[id];
@@ -840,22 +841,23 @@ function openDesign(id) {
   state.design = id;
   $('#design-title').textContent = design.name;
   $('#design-name').value = design.name;
-  $('#design-open').hidden = id === state.store.current;
   $('#design-status').textContent =
     id === state.store.current ? 'This is the one you are working on.' : '';
   $('#designeditor').showModal();
   $('#designeditor button[value=\"cancel\"]').focus();
 }
 
-function useDesign(id) {
+function useDesign(id, tab) {
   if (!state.store.designs[id]) return;
-  state.store.current = id;
-  keep();
-  // A different roof is a different search; the plan on screen was not made
-  // from these measurements.
-  resetSearches('');
+  if (id !== state.store.current) {
+    state.store.current = id;
+    keep();
+    // A different roof is a different search; the plan on screen was not made
+    // from these measurements.
+    resetSearches('');
+  }
   draw();
-  $('#designeditor').close('cancel');
+  if (tab) showTab(tab);
   status(`${state.store.designs[id].name} — open`);
 }
 
@@ -1079,13 +1081,20 @@ $('#designs').addEventListener('click', (event) => {
     state.store.designs[id] = store.toDesign('My roof', state.defaults.cuts);
     state.store.current = id;
     keep();
+    // Starting a roof is opening it — the same as Open on a row, so it lands in
+    // the same place. Staying on an empty-turned-one-row list says nothing.
     draw();
+    showTab('roof');
     return;
   }
-  const row = event.target.closest('.design-row');
-  if (row) openDesign(row.dataset.design);
+  const open = event.target.closest('.design-open');
+  if (open) {
+    useDesign(open.dataset.design, 'roof');
+    return;
+  }
+  const edit = event.target.closest('.design-edit');
+  if (edit) openDesign(edit.dataset.design);
 });
-$('#design-open').addEventListener('click', () => useDesign(state.design));
 $('#design-rename').addEventListener('click', renameDesign);
 $('#design-delete').addEventListener('click', deleteDesign);
 $('#cutplan').addEventListener('change', (event) => {

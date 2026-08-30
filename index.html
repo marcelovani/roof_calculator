@@ -224,7 +224,8 @@
          pasted over the file by hand. -->
     <!-- One sheet size. The id is not shown: it is what the cut-plan selection
          points at, so it is made once and never edited. -->
-    <!-- One design. Open is the everyday action, so it leads. -->
+    <!-- One design. Opening one is done from the row in the list; this is only
+         the two things that need typing or confirming. -->
     <dialog id="designeditor">
       <form method="dialog">
         <h2 id="design-title">Design</h2>
@@ -235,8 +236,7 @@
         </div>
         <p class="hint" id="design-status"></p>
         <div class="editor-buttons">
-          <button type="button" id="design-open" class="primary">Open</button>
-          <button type="button" id="design-rename">Rename</button>
+          <button type="button" id="design-rename" class="primary">Rename</button>
           <button type="button" id="design-delete" class="danger">
             Delete
           </button>
