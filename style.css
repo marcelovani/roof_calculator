@@ -375,6 +375,14 @@ button.danger:hover { background: #c0392b; color: #fff; }
   .pick { padding: 9px 12px; font-size: 14px; }
   .pick-actions button { padding: 10px 16px; font-size: 14px; }
 }
+/* The cut plan lays the sheets out with flex-wrap, so the picker and the
+   controls above them would otherwise sit alongside the first drawing. Each
+   takes a row of its own and the drawings start on the line below. */
+#cutplan > .sheet-picker,
+#cutplan > .plan-controls,
+#cutplan > .hint,
+#cutplan > table.offers,
+#cutplan > .materials { flex: 0 0 100%; max-width: none; }
 
 
 /* The designs kept in this browser. */
