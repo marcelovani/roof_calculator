@@ -71,3 +71,19 @@ test('a plan written out is read back as the same arrangement', () => {
   assert.equal(sheets.length, nested.sheets.length);
   assert.equal(cost, nested.cost);
 });
+
+test('a half turn survives being written out, whichever nester labelled it', () => {
+  const turned = { ...pieces[0], vertices: pieces[0].vertices };
+  const asSheet = (orientation) => ({
+    sheets: [
+      {
+        sheet: config.sheets[0],
+        placements: [{ x: 0, y: 0, block: { placements: [{ piece: turned, orientation, vertices: turned.vertices }] } }],
+      },
+    ],
+  });
+  // nest.js says 180, nest-blf.js says 1; both mean the same half turn.
+  assert.equal(JSON.parse(planJson(asSheet(180))).sheets[0].pieces[0].orientation, 180);
+  assert.equal(JSON.parse(planJson(asSheet(1))).sheets[0].pieces[0].orientation, 180);
+  assert.equal(JSON.parse(planJson(asSheet(0))).sheets[0].pieces[0].orientation, 0);
+});

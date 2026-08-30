@@ -429,3 +429,6 @@ button.danger:hover { background: #c0392b; color: #fff; }
 /* The prompt and the plan are read, not written: tall enough to take in, and
    scrolling rather than growing so the buttons under them stay in reach. */
 .ask textarea.long { resize: vertical; max-height: 50vh; }
+
+/* Small enough to sit in a row without setting the row's height. */
+table.offers .exportrow { font-size: 11px; padding: 3px 7px; white-space: nowrap; }
