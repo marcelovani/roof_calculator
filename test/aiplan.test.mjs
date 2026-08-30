@@ -102,3 +102,32 @@ test('the prompt names each list where it goes, and takes it back', () => {
 test('a list nobody supplied leaves its token standing rather than a hole', () => {
   assert.match(fillPrompt('take [sheets] and [pieces]', { sheets: 'these' }), /take these and \[pieces\]/);
 });
+
+test('the checker holds a plan to the kerf the nesters pack to', () => {
+  const withKerf = { ...config, kerf: 2 };
+  // Touching along a cut line is fine at kerf nought and not fine at kerf 2.
+  assert.deepEqual(readPlan(asPlan([at('1', 0, 0), at('2', 100, 0)]), pieces, config).problems, []);
+  assert.match(
+    readPlan(asPlan([at('1', 0, 0), at('2', 100, 0)]), pieces, withKerf).problems.join(' '),
+    /1 and 2 are less than 2 cm apart/,
+  );
+  assert.deepEqual(readPlan(asPlan([at('1', 0, 0), at('2', 102, 0)]), pieces, withKerf).problems, []);
+});
+
+test('the prompt says whatever the config says about the saw cut and the tolerance', () => {
+  assert.match(promptFor(pieces, { ...config, kerf: 0, allowance: 1 }), /butt straight up against each other/);
+  assert.match(promptFor(pieces, { ...config, kerf: 0, allowance: 1 }), /you have 1 cm more than the sheet says/);
+  assert.match(promptFor(pieces, { ...config, kerf: 0.5 }), /Leave 0\.5 cm between pieces for the saw cut/);
+  assert.doesNotMatch(promptFor(pieces, { ...config, kerf: 0.5 }), /butt straight up/);
+});
+
+test('a plan survives its own rounding — the millimetre it is written at', () => {
+  // Two pieces butted against each other at a coordinate that does not land on
+  // a millimetre: written out, the pair move toward each other and must not
+  // then be called overlapping.
+  const tight = JSON.stringify({ sheets: [{ sheet: 'big', pieces: [at('1', 0, 0), at('2', 100.04, 0)] }] });
+  assert.deepEqual(readPlan(tight, pieces, config).problems, []);
+  // A millimetre of rounding is forgiven; a centimetre of overlap is not.
+  const clashing = JSON.stringify({ sheets: [{ sheet: 'big', pieces: [at('1', 0, 0), at('2', 99, 0)] }] });
+  assert.match(readPlan(clashing, pieces, config).problems.join(' '), /1 and 2 overlap/);
+});

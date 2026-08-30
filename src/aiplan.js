@@ -16,7 +16,16 @@
 
 import { area, bbox, normalise, rotate180, translate } from './geometry.js';
 
-const round = (n) => Math.round(n * 10) / 10;
+/**
+ * A tenth of a centimetre — a millimetre — is the precision everything here is
+ * exchanged at: the corners the model is given, and the positions it sends back.
+ * So it is also how close two pieces may come before they are called overlapping.
+ * Any less and the nester's own plan, written out and read straight back in,
+ * fails on its own rounding.
+ */
+const PRECISION = 0.1;
+
+const round = (n) => Math.round(n / PRECISION) * PRECISION;
 
 /** The pieces as coordinates, which is what an arrangement has to be made of. */
 export function pieceList(pieces) {
@@ -72,12 +81,19 @@ Rules, all of them hard:
 - A piece may be placed as it is, or turned a half turn (180 degrees). No quarter
   turns and no mirroring: the flutes must run along the length of the sheet and
   the UV face must stay up.
-- Pieces may not overlap. They may butt straight up against each other: the saw
-  cut is not worth planning around, it comes out of the tolerance below.
+- Pieces may not overlap.
+${
+    Number(config.kerf)
+      ? `- Leave ${config.kerf} cm between pieces for the saw cut.`
+      : `- Pieces may butt straight up against each other: the saw cut is not worth
+  planning around, it comes out of the tolerance below.`
+  }
 - Along the sheet, no piece may cross the end. The length is the length.
 - Across the sheet you have ${config.allowance || 0} cm more than the sheet says. So a 210 wide
   sheet takes three pieces 70 wide, and takes 70 + 70 + 71 as well.
-${config.margin ? `- Leave ${config.margin} cm unused at the sheet edge.\n` : ''}- Every piece must be placed exactly once.
+${config.margin ? `- Leave ${config.margin} cm unused at the sheet edge.\n` : ''}- Every piece must be placed exactly once. The one exception is a piece that fits
+  no sheet in the catalogue at all: leave that one out, and it will be reported
+  as unplaced rather than counted against you.
 - Sheets may be used more than once; you pay for each one you use.
 
 Sheets available (id: width x length, price):
@@ -109,8 +125,17 @@ is no floor and you are starting from nothing.
 [plan]`;
 }
 
-/** Convex polygons, so a separating axis settles it. */
-function overlaps(a, b) {
+/**
+ * Convex polygons, so a separating axis settles it — and the same axes answer
+ * whether the two are the saw cut apart.
+ *
+ * Only the two polygons' own edge normals are tried, which is all the theorem
+ * needs to prove an overlap. As a distance it is exact where the pieces face
+ * each other along an edge, and a shade generous where two corners pass at an
+ * angle. At a kerf of nought — where the roof stands today — it is the plain
+ * overlap test either way.
+ */
+function overlaps(a, b, clearance = 0) {
   for (const poly of [a, b]) {
     for (let i = 0; i < poly.length; i++) {
       const p = poly[i];
@@ -122,9 +147,11 @@ function overlaps(a, b) {
       };
       const pa = project(a);
       const pb = project(b);
-      // A shared cut line is not an overlap, so a hair of slack is allowed.
-      const slack = 1e-3 * Math.hypot(axis.x, axis.y);
-      if (pa.max <= pb.min + slack || pb.max <= pa.min + slack) return false;
+      // A shared cut line is not an overlap, and neither is a millimetre of
+      // rounding. The projections are onto an axis that was never normalised, so
+      // the gap asked for has to be scaled the same way.
+      const gap = (clearance - PRECISION) * Math.hypot(axis.x, axis.y);
+      if (pa.max <= pb.min - gap || pb.max <= pa.min - gap) return false;
     }
   }
   return true;
@@ -147,6 +174,7 @@ export function readPlan(text, pieces, config) {
   const byId = new Map(pieces.filter((p) => p.vertices).map((p) => [String(p.id), p]));
   const margin = Number(config.margin) || 0;
   const allowance = Number(config.allowance) || 0;
+  const kerf = Number(config.kerf) || 0;
   const placedIds = [];
   const sheets = [];
 
@@ -172,7 +200,12 @@ export function readPlan(text, pieces, config) {
       const box = bbox(vertices);
       // The same tolerance the nesters pack to: a centimetre across the sheet,
       // nothing along it.
-      if (box.minX < margin - 0.05 || box.minY < margin - 0.05 || box.maxX > sheet.width - margin + allowance + 0.05 || box.maxY > sheet.length - margin + 0.05) {
+      if (
+        box.minX < margin - PRECISION ||
+        box.minY < margin - PRECISION ||
+        box.maxX > sheet.width - margin + allowance + PRECISION ||
+        box.maxY > sheet.length - margin + PRECISION
+      ) {
         problems.push(`Piece ${spot.id} hangs off sheet ${index + 1} (${sheet.id}).`);
       }
       placedIds.push(String(piece.id));
@@ -181,8 +214,10 @@ export function readPlan(text, pieces, config) {
 
     for (let i = 0; i < placements.length; i++) {
       for (let j = i + 1; j < placements.length; j++) {
-        if (overlaps(placements[i].vertices, placements[j].vertices)) {
-          problems.push(`Pieces ${placements[i].piece.id} and ${placements[j].piece.id} overlap on sheet ${index + 1}.`);
+        if (overlaps(placements[i].vertices, placements[j].vertices, kerf)) {
+          problems.push(
+            `Pieces ${placements[i].piece.id} and ${placements[j].piece.id} ${kerf ? `are less than ${kerf} cm apart` : 'overlap'} on sheet ${index + 1}.`,
+          );
         }
       }
     }
