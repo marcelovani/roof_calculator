@@ -55,11 +55,10 @@
           kept in this browser, so <b>Export</b> is how work leaves it and
           <b>Import</b> is how it comes back. <code>data/cuts.json</code> and
           <code>data/sheets.json</code> are the starting point and what Reset
-          goes back to. A <b>green</b> border means the lengths close into a real
-          piece, <b>red</b> that they do not and the drawing is the nearest that
-          does.
-          <b>All values are in cm</b>. Edges go clockwise from the bottom-left
-          corner and numbered from there:
+          goes back to. A <b>green</b> border means the lengths close into a
+          real piece, <b>red</b> that they do not and the drawing is the nearest
+          that does. <b>All values are in cm</b>. Edges go clockwise from the
+          bottom-left corner and numbered from there:
           <code>[side 1, side 2, side 3, side 4]</code> for 4 sides,
           <code>[side 1, side 2, side 3]</code> for 3. The last one is always
           the base — the edge that sits on the eave.
@@ -85,63 +84,114 @@
             aria-expanded="true"
             title="Hide the sidebar"
           >
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2 4h12M2 8h12M2 12h12" />
+            </svg>
           </button>
         </div>
 
         <div class="group" role="group" aria-label="View">
-          <button data-tab="pieces" title="Every piece, measured">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>
-            <span>Pieces</span>
-          </button>
           <button data-tab="roof" title="The roof from above">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 7l7-5 7 5"/><path d="M3 7v7h10V7"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M1 7l7-5 7 5" />
+              <path d="M3 7v7h10V7" />
+            </svg>
             <span>Roof</span>
           </button>
-          <button data-tab="cutplan" title="What to cut from which sheet">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12"/><path d="M6 2v12M2 9h4"/></svg>
-            <span>Cut plan</span>
+          <button data-tab="pieces" title="Every piece, measured">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <rect x="2" y="2" width="5" height="5" />
+              <rect x="9" y="2" width="5" height="5" />
+              <rect x="2" y="9" width="5" height="5" />
+              <rect x="9" y="9" width="5" height="5" />
+            </svg>
+            <span>Pieces</span>
           </button>
           <button data-tab="sheets" title="The sizes you can buy">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h7"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2 4h12M2 8h12M2 12h7" />
+            </svg>
             <span>Sheets</span>
           </button>
+          <button data-tab="cutplan" title="What to cut from which sheet">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <rect x="2" y="2" width="12" height="12" />
+              <path d="M6 2v12M2 9h4" />
+            </svg>
+            <span>Cut plan</span>
+          </button>
           <button data-tab="designs" title="Your saved designs">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 12V4a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M2 12V4a1 1 0 0 1 1-1h3l2 2h5a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"
+              />
+            </svg>
             <span>Designs</span>
           </button>
           <button data-tab="ai" title="Hand the pieces to a model">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M14 10a2 2 0 0 1-2 2H6l-4 3V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M14 10a2 2 0 0 1-2 2H6l-4 3V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"
+              />
+            </svg>
             <span>Ask</span>
           </button>
         </div>
 
         <div class="group" role="group" aria-label="File">
           <button id="reload" title="Read the files again and redraw">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M14 8a6 6 0 1 1-1.8-4.3"/><path d="M14 2v4h-4"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M14 8a6 6 0 1 1-1.8-4.3" />
+              <path d="M14 2v4h-4" />
+            </svg>
             <span>Redraw</span>
           </button>
           <button id="saveas" title="Keep a copy of this roof under a new name">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7l4 4v7a1 1 0 0 1-1 1z"/><path d="M5 2v4h5"/><path d="M8 9v3M6.5 10.5h3"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M13 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7l4 4v7a1 1 0 0 1-1 1z"
+              />
+              <path d="M5 2v4h5" />
+              <path d="M8 9v3M6.5 10.5h3" />
+            </svg>
             <span>Save as</span>
           </button>
           <button id="export" title="Copy the measurements out">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V2"/><path d="M5 5l3-3 3 3"/><path d="M2 11v3h12v-3"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 11V2" />
+              <path d="M5 5l3-3 3 3" />
+              <path d="M2 11v3h12v-3" />
+            </svg>
             <span>Export</span>
           </button>
           <button id="import" title="Paste measurements back in">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v9"/><path d="M5 8l3 3 3-3"/><path d="M2 11v3h12v-3"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M8 2v9" />
+              <path d="M5 8l3 3 3-3" />
+              <path d="M2 11v3h12v-3" />
+            </svg>
             <span>Import</span>
           </button>
-          <button id="print" class="print" title="Print the tab you are looking at">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6V2h8v4"/><path d="M4 12H2V6h12v6h-2"/><rect x="4" y="10" width="8" height="4"/></svg>
+          <button
+            id="print"
+            class="print"
+            title="Print the tab you are looking at"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M4 6V2h8v4" />
+              <path d="M4 12H2V6h12v6h-2" />
+              <rect x="4" y="10" width="8" height="4" />
+            </svg>
             <span>Print</span>
           </button>
         </div>
 
         <div class="group" role="group" aria-label="Settings">
           <button id="forgetlocal" title="Start again from the shipped files">
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8a6 6 0 1 0 1.8-4.3"/><path d="M2 2v4h4"/></svg>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M2 8a6 6 0 1 0 1.8-4.3" />
+              <path d="M2 2v4h4" />
+            </svg>
             <span>Reset</span>
           </button>
         </div>
@@ -179,13 +229,17 @@
       <form method="dialog">
         <h2 id="design-title">Design</h2>
         <div class="fields">
-          <label><span>Name</span><input id="design-name" autocomplete="off"></label>
+          <label
+            ><span>Name</span><input id="design-name" autocomplete="off"
+          /></label>
         </div>
         <p class="hint" id="design-status"></p>
         <div class="editor-buttons">
           <button type="button" id="design-open" class="primary">Open</button>
           <button type="button" id="design-rename">Rename</button>
-          <button type="button" id="design-delete" class="danger">Delete</button>
+          <button type="button" id="design-delete" class="danger">
+            Delete
+          </button>
           <button value="cancel" formnovalidate autofocus>Cancel</button>
         </div>
       </form>
@@ -198,14 +252,34 @@
         <h2>Reset</h2>
         <p class="hint">Nothing happens to anything you leave unticked.</p>
         <div class="checks">
-          <label><input type="checkbox" id="reset-cuts">
-            <span><b>Measurements</b> — read <code>data/cuts.json</code> again into the design that is open</span></label>
-          <label><input type="checkbox" id="reset-sheets">
-            <span><b>Sheet sizes</b> — back to <code>data/sheets.json</code>, losing any price you have changed</span></label>
-          <label><input type="checkbox" id="reset-settings">
-            <span><b>Settings</b> — hidden sides, the sizes ticked for the plan, which tab you were on</span></label>
-          <label><input type="checkbox" id="reset-designs">
-            <span><b>Designs</b> — delete every saved design, including the one that is open</span></label>
+          <label
+            ><input type="checkbox" id="reset-cuts" />
+            <span
+              ><b>Measurements</b> — read <code>data/cuts.json</code> again into
+              the design that is open</span
+            ></label
+          >
+          <label
+            ><input type="checkbox" id="reset-sheets" />
+            <span
+              ><b>Sheet sizes</b> — back to <code>data/sheets.json</code>,
+              losing any price you have changed</span
+            ></label
+          >
+          <label
+            ><input type="checkbox" id="reset-settings" />
+            <span
+              ><b>Settings</b> — hidden sides, the sizes ticked for the plan,
+              which tab you were on</span
+            ></label
+          >
+          <label
+            ><input type="checkbox" id="reset-designs" />
+            <span
+              ><b>Designs</b> — delete every saved design, including the one
+              that is open</span
+            ></label
+          >
         </div>
         <p class="hint" id="reset-status"></p>
         <div class="editor-buttons">

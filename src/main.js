@@ -342,7 +342,7 @@ function draw() {
   $('#pieces').innerHTML = renderPieces(pieces, problems, data.units, state.showFitted);
   $('#roof').innerHTML = renderRoof(pieces, data.units, state.hiddenSides, state.flags);
   drawAsk(pieces, result);
-  $('#cutplan').innerHTML = planControls(fast) + renderCutPlan(result, data) + materials(result, data);
+  $('#cutplan').innerHTML = planControls(fast, result) + renderCutPlan(result, data) + materials(result, data);
   $('#sheets').innerHTML = renderSheets(state.store.sheets, data.units);
   $('#designs').innerHTML = renderDesigns(state.store.designs, state.store.current, data.units);
   renderSummary(pieces, result, problems, data.units);
@@ -413,9 +413,24 @@ function setPicks(ids) {
   draw();
 }
 
-function planControls(fast) {
+/**
+ * The controls above the plan, and the one thing that can make the plan a lie.
+ *
+ * A piece that fits no ticked size is not cut at all — the nester sets it aside
+ * and prices what is left. That is a smaller number than the roof costs, and
+ * without saying so it reads as a saving. So it is said here, next to the
+ * price, rather than only in the sidebar.
+ */
+function planControls(fast, result = fast) {
   const picker = renderSheetPicker(state.store.sheets, pickedIds(), state.data.units);
-  if (!fast.sheets.length) return picker;
+  const unplaced = (result.leftovers || []).flatMap((b) => b.placements.map((p) => p.piece.id));
+  const nowhere = unplaced.length
+    ? `<p class="hint bad"><b>${unplaced.length} ${unplaced.length === 1 ? 'piece is' : 'pieces are'} not in this plan</b> —
+       nothing ticked is big enough for ${unplaced.length === 1 ? 'it' : 'them'}. The price below is for the
+       ${(result.sheets || []).length ? 'rest' : 'others'} only, so it is not what the roof costs.
+       Pieces ${unplaced.join(', ')}.</p>`
+    : '';
+  if (!fast.sheets.length) return picker + nowhere;
   const { active, chosen, reduce } = state.opt;
   const rows = offers();
   const status = active
@@ -448,7 +463,7 @@ function planControls(fast) {
 
   // One button, three jobs: start, stop, start again. Starting again adds to the
   // list rather than replacing it, which is what "more" is saying.
-  return `${picker}<div class="plan-controls">
+  return `${picker}${nowhere}<div class="plan-controls">
     <label class="reduce">every piece
       <input id="reduce" type="number" step="0.5" min="0" value="${esc(reduce)}"${active ? ' disabled' : ''}> cm smaller</label>
     <button id="optimise">${active ? 'Stop' : rows.length ? 'Optimise more' : 'Optimise'}</button>

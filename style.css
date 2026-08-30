@@ -70,7 +70,7 @@ main { flex: 1; padding: 20px 24px 60px; overflow-x: auto; }
 .toolbar .group + .group { margin-left: 10px; padding-left: 10px; border-left: 1px solid var(--line); }
 .toolbar svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
-.tabs button, .toolbar button {
+.tabs button, .toolbar button, .plan-controls button {
   padding: 7px 12px; border: 1px solid var(--line); border-radius: 5px;
   background: var(--panel); font-size: 13px; cursor: pointer; color: var(--muted);
 }
@@ -79,13 +79,13 @@ main { flex: 1; padding: 20px 24px 60px; overflow-x: auto; }
 .toolbar .group button:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
 .toolbar .group button:last-child { border-radius: 0 5px 5px 0; }
 .toolbar .group button:only-child { border-radius: 5px; }
-.toolbar button:hover { color: var(--ink); background: #f2f1ee; }
+.toolbar button:hover, .plan-controls button:hover { color: var(--ink); background: #f2f1ee; }
 .toolbar button.active, .tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; position: relative; z-index: 1; }
 /* Folded away the sidebar is 290px of the tablet back, which is most of a piece. */
 .tabs .collapse { font-size: 16px; line-height: 1; padding: 7px 12px; }
 body.sidebar-off .sidebar { display: none; }
 @media (pointer: coarse) {
-  .tabs button, .toolbar button { padding: 12px 14px; font-size: 15px; }
+  .tabs button, .toolbar button, .plan-controls button { padding: 12px 14px; font-size: 15px; }
   .toolbar svg { width: 18px; height: 18px; }
 }
 /* No room for the words on a phone; the icons and the tooltips carry it. */
@@ -395,4 +395,11 @@ button.danger:hover { background: #c0392b; color: #fff; }
 @media (pointer: coarse) {
   .design-row { padding: 16px 12px; }
   .checks label { font-size: 15px; }
+}
+
+
+/* Said where it matters: a plan that leaves pieces out is not a cheaper plan. */
+.hint.bad {
+  color: #8a3d2f; background: #fdf3f1; border: 1px solid #e6c5bd;
+  border-radius: 5px; padding: 10px 12px; max-width: 720px;
 }
