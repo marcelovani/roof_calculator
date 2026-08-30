@@ -1,6 +1,7 @@
 {
   "units": "cm",
-  "kerf": 0.5,
+  "kerf": 0,
+  "allowance": 1,
   "margin": 0,
   "priceNote": "Axiome Clear 16mm, clearambershop.com, read 2026-08-28. GBP inc VAT, delivery free over 400.",
   "sheets": [

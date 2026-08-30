@@ -111,8 +111,10 @@ const asBlock = (piece, vertices, turned) => ({
 });
 
 /** Fill one sheet from the queue, taking whatever fits in the order given. */
-function fillSheet(queue, sheet, kerf, margin) {
-  const limitX = sheet.width - 2 * margin;
+function fillSheet(queue, sheet, kerf, margin, allowance = 0) {
+  // Across the sheet only — see the note in nest.js. Along it the same slack
+  // would buy nothing and cost a whole extra sheet.
+  const limitX = sheet.width - 2 * margin + allowance;
   const limitY = sheet.length - 2 * margin;
   const placed = [];
   const taken = new Set();
@@ -126,7 +128,7 @@ function fillSheet(queue, sheet, kerf, margin) {
 }
 
 /** One queue, sheet after sheet, each the size that swallows most area per pound. */
-function packQueue(queue, sheetTypes, kerf, margin) {
+function packQueue(queue, sheetTypes, kerf, margin, allowance) {
   let remaining = queue;
   const sheets = [];
   let cost = 0;
@@ -135,7 +137,7 @@ function packQueue(queue, sheetTypes, kerf, margin) {
   while (remaining.length && guard++ < 200) {
     let best = null;
     for (const sheet of sheetTypes) {
-      const trial = fillSheet(remaining, sheet, kerf, margin);
+      const trial = fillSheet(remaining, sheet, kerf, margin, allowance);
       if (!trial.placed.length) continue;
       const absorbed = trial.placed.reduce((s, p) => s + area(p.vertices), 0);
       const value = absorbed / sheetCost(sheet);
@@ -236,9 +238,10 @@ export function createSearch(pieces, config, opts = {}) {
   const shrink = Number(opts.shrink) || 0;
   const kerf = Number(config.kerf) || 0;
   const margin = Number(config.margin) || 0;
+  const allowance = Number(config.allowance) || 0;
   const sheetTypes = (config.sheets || []).filter((s) => s.width > 0 && s.length > 0);
   const limit = {
-    width: Math.max(0, ...sheetTypes.map((s) => s.width)) - 2 * margin,
+    width: Math.max(0, ...sheetTypes.map((s) => s.width)) - 2 * margin + allowance,
     length: Math.max(0, ...sheetTypes.map((s) => s.length)) - 2 * margin,
   };
 
@@ -293,7 +296,7 @@ export function createSearch(pieces, config, opts = {}) {
     return result;
   };
 
-  const pack = (ord, trn) => record(packQueue(entries(shapes, ord, trn), sheetTypes, kerf, margin), ord, trn);
+  const pack = (ord, trn) => record(packQueue(entries(shapes, ord, trn), sheetTypes, kerf, margin, allowance), ord, trn);
   let best = sheetTypes.length ? pack(order, turns) : null;
 
   return {
@@ -312,7 +315,7 @@ export function createSearch(pieces, config, opts = {}) {
     /** One of them, packed again — the search keeps the recipe, not the plan. */
     rebuild(key) {
       const found = top.find((t) => t.key === key);
-      return found ? dress(packQueue(entries(shapes, found.order, found.turns), sheetTypes, kerf, margin)) : null;
+      return found ? dress(packQueue(entries(shapes, found.order, found.turns), sheetTypes, kerf, margin, allowance)) : null;
     },
     /** One move away each time: a swap in the order, or a piece turned over. */
     step(rounds = 1) {

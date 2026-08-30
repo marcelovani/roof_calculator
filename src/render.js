@@ -265,16 +265,24 @@ const SHEET_MAX_W = 300;
 export function renderCutPlan(result, config) {
   if (!result.sheets.length) return '<p class="muted">Nothing to nest yet — fill in some edge lengths.</p>';
   const margin = Number(config.margin) || 0;
+  const allowance = Number(config.allowance) || 0;
+  /** How far past the sheet's own width this one reaches, into the allowance. */
+  const overrunOf = (s) =>
+    Math.max(0, ...s.placements.flatMap((p) => p.block.placements.map((pl) => p.x + bbox(pl.vertices).maxX)) ) - s.sheet.width;
   // One scale for the lot. Fitting each sheet to the page separately draws a 5 m
   // sheet the same size as a 2.5 m one, which is exactly the comparison you came
   // to the cut plan to make.
   const longest = Math.max(...result.sheets.map((s) => s.sheet.length));
-  const widest = Math.max(...result.sheets.map((s) => s.sheet.width));
+  // The allowance is drawn, not clipped: a piece that runs into it has to be
+  // visible past the edge or the red line means nothing.
+  const widest = Math.max(...result.sheets.map((s) => s.sheet.width + Math.max(0, overrunOf(s))));
   const scale = Math.min(SHEET_MAX_H / longest, SHEET_MAX_W / widest);
   return result.sheets
     .map((s, i) => {
+      const over = Math.max(0, overrunOf(s));
       const w = s.sheet.width * scale;
       const h = s.sheet.length * scale;
+      const canvas = (s.sheet.width + over) * scale;
       const used = s.placements.reduce((sum, p) => sum + p.block.area, 0);
       const shapes = s.placements
         .flatMap((p) =>
@@ -291,18 +299,33 @@ export function renderCutPlan(result, config) {
           })
         )
         .join('');
+      // Dashed and red at the width the shop sells, so what sits to the right of
+      // it is exactly what you are trusting the tolerance for.
+      const edge = over
+        ? `<line class="over-line" x1="${w.toFixed(1)}" y1="0" x2="${w.toFixed(1)}" y2="${h.toFixed(1)}"/>`
+        : '';
       return `<figure class="sheet">
-        <svg viewBox="0 0 ${w.toFixed(1)} ${h.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}">
+        <svg viewBox="0 0 ${canvas.toFixed(1)} ${h.toFixed(1)}" width="${canvas.toFixed(1)}" height="${h.toFixed(1)}">
           <rect x="0" y="0" width="${w.toFixed(1)}" height="${h.toFixed(1)}" class="offcut"/>
           <rect x="${(margin * scale).toFixed(1)}" y="${(margin * scale).toFixed(1)}"
                 width="${((s.sheet.width - 2 * margin) * scale).toFixed(1)}"
                 height="${((s.sheet.length - 2 * margin) * scale).toFixed(1)}" class="usable"/>
           ${shapes}
           <rect x="0.75" y="0.75" width="${(w - 1.5).toFixed(1)}" height="${(h - 1.5).toFixed(1)}" class="sheet-edge"/>
+          ${edge}
         </svg>
         <figcaption><b>Sheet ${i + 1}</b> — ${esc(s.sheet.id)}
           <span class="muted">${fmt(s.sheet.width)} &times; ${fmt(s.sheet.length)} &middot;
-            ${Math.round((used / (s.sheet.width * s.sheet.length)) * 100)}% used</span></figcaption>
+            ${Math.round((used / (s.sheet.width * s.sheet.length)) * 100)}% used</span>
+          ${
+            over
+              ? `<span class="over">Runs ${fmt(over)} cm past the red line — ${fmt(s.sheet.width + over)} cm
+                  wanted across a ${fmt(s.sheet.width)} cm sheet. Within the ${fmt(allowance)} cm allowed, but
+                  it only cuts if the sheet and the pieces are both as measured.</span>`
+              : allowance
+                ? `<span class="muted">Fits the ${fmt(s.sheet.width)} cm without using the ${fmt(allowance)} cm allowance.</span>`
+                : ''
+          }</figcaption>
       </figure>`;
     })
     .join('');

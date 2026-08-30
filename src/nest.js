@@ -173,8 +173,13 @@ export function buildBlocks(pieces, kerf, limit = { width: Infinity, length: Inf
  * Shelf packing, first fit by decreasing height. Sheet length is the flute
  * axis, so a block's height is measured against the sheet's length.
  */
-function packInto(blocks, sheet, kerf, margin) {
-  const usableW = sheet.width - 2 * margin;
+function packInto(blocks, sheet, kerf, margin, allowance = 0) {
+  // Across the sheet only. A run of pieces measured off a roof adds up to a
+  // little more than the roof is, and the saw cut takes some of it back; a
+  // centimetre of that is under the tolerance of the job. Along the sheet the
+  // same slack would buy nothing and cost a whole extra sheet, so it is not
+  // given there.
+  const usableW = sheet.width - 2 * margin + allowance;
   const usableL = sheet.length - 2 * margin;
   const sheets = [];
   const leftovers = [];
@@ -228,15 +233,15 @@ const ORDERINGS = [
 ];
 
 /** One sheet size for the whole job. */
-function singleTypePlan(blocks, sheet, kerf, margin) {
+function singleTypePlan(blocks, sheet, kerf, margin, allowance) {
   return ORDERINGS.map((order) => {
-    const { sheets, leftovers } = packInto([...blocks].sort(order), sheet, kerf, margin);
+    const { sheets, leftovers } = packInto([...blocks].sort(order), sheet, kerf, margin, allowance);
     return { sheets, leftovers, cost: sheets.length * sheetCost(sheet) };
   }).reduce((a, b) => (b.leftovers.length - a.leftovers.length || b.cost - a.cost) < 0 ? b : a);
 }
 
 /** Fill one sheet at a time, each time with whichever size swallows most area per pound. */
-function mixedPlan(blocks, sheetTypes, kerf, margin, order = ORDERINGS[0]) {
+function mixedPlan(blocks, sheetTypes, kerf, margin, allowance, order = ORDERINGS[0]) {
   let remaining = [...blocks].sort(order);
   const sheets = [];
   const leftovers = [];
@@ -246,7 +251,7 @@ function mixedPlan(blocks, sheetTypes, kerf, margin, order = ORDERINGS[0]) {
   while (remaining.length && guard++ < 500) {
     let best = null;
     for (const sheet of sheetTypes) {
-      const trial = packInto(remaining, sheet, kerf, margin);
+      const trial = packInto(remaining, sheet, kerf, margin, allowance);
       if (!trial.sheets.length) continue;
       const first = trial.sheets[0];
       const absorbed = first.placements.reduce((sum, p) => sum + p.block.area, 0);
@@ -268,9 +273,10 @@ function mixedPlan(blocks, sheetTypes, kerf, margin, order = ORDERINGS[0]) {
 export function plan(pieces, config) {
   const kerf = Number(config.kerf) || 0;
   const margin = Number(config.margin) || 0;
+  const allowance = Number(config.allowance) || 0;
   const sheetTypes = (config.sheets || []).filter((s) => s.width > 0 && s.length > 0);
   const limit = {
-    width: Math.max(0, ...sheetTypes.map((s) => s.width)) - 2 * margin,
+    width: Math.max(0, ...sheetTypes.map((s) => s.width)) - 2 * margin + allowance,
     length: Math.max(0, ...sheetTypes.map((s) => s.length)) - 2 * margin,
   };
   const blocks = buildBlocks(pieces, kerf, limit);
@@ -282,8 +288,8 @@ export function plan(pieces, config) {
   const tooBig = blocks.filter((b) => b.width > limit.width || b.height > limit.length);
   const packable = blocks.filter((b) => !tooBig.includes(b));
 
-  const plans = sheetTypes.map((s) => singleTypePlan(packable, s, kerf, margin));
-  for (const order of ORDERINGS) plans.push(mixedPlan(packable, sheetTypes, kerf, margin, order));
+  const plans = sheetTypes.map((s) => singleTypePlan(packable, s, kerf, margin, allowance));
+  for (const order of ORDERINGS) plans.push(mixedPlan(packable, sheetTypes, kerf, margin, allowance, order));
 
   const usable = plans.filter((p) => !p.leftovers.length);
   const pool = usable.length ? usable : plans;

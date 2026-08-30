@@ -38,10 +38,13 @@ const oneWidth = { ...config, sheets: config.sheets.filter((s) => s.width === na
 /** A rectangle w across and h up the sheet, from [left, top, right, base]. */
 const slab = (id, w, h) => ({ id, side: 'west', edges: [h, w, h, w], vertices: buildPolygon([h, w, h, w]).vertices, fitted: null });
 
+// Over the width the nester will actually take, which is the sheet plus the
+// allowance across it — not the sheet on its own.
+const takes = narrowest + (Number(config.allowance) || 0);
 const straddling = [
-  slab('fits', narrowest - 10, 60),
-  slab('just-over', narrowest + 1, 60),
-  slab('well-over', narrowest + 4, 60),
+  slab('fits', takes - 10, 60),
+  slab('just-over', takes + 1, 60),
+  slab('well-over', takes + 4, 60),
 ];
 
 test('no slack leaves the pieces exactly as they were measured', () => {
