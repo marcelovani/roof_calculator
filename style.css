@@ -144,11 +144,12 @@ figcaption { display: flex; justify-content: space-between; gap: 10px; font-size
 /* .sheets sets display:flex, which would otherwise beat the hidden attribute. */
 .panel[hidden] { display: none; }
 
-/* Comfortable at 460, but never wider than what it has been given: below that
-   the columns squeeze rather than running off the side of the page. */
+/* It fills the column it is given and never sets that column's width, which is
+   what a percentage minimum here would try to do — against a width that depends
+   on the table. */
 table.order {
   border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
-  min-width: min(460px, 100%); max-width: 100%;
+  width: 100%; min-width: 0;
 }
 table.order th, table.order td { padding: 8px 14px; border-bottom: 1px solid var(--line); text-align: left; }
 table.order th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
@@ -407,18 +408,27 @@ button.danger:hover { background: #c0392b; color: #fff; }
 }
 /* The drawings wrap inside their own column so the order list can hold the one
    beside it. Below the width where both fit, the bill drops under the sheets. */
-.plan-body { display: flex; align-items: flex-start; gap: 20px; }
-.plan-body > .sheets { flex: 1 1 auto; min-width: 0; }
+.plan-body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; }
+/* Never narrower than the widest drawing: a sheet squeezed by the column beside
+   it is the one thing on this page that has to stay legible. If that will not
+   fit alongside the bill, the bill wraps under it instead. */
+.plan-body > .sheets { flex: 1 1 420px; min-width: 340px; }
+/* An explicit width rather than one worked out from the table inside it: the
+   column scrolls its own overflow, so anything that lets it shrink below the
+   bill clips the bill instead of widening the column. */
 .plan-body > .materials {
-  flex: 0 1 auto; min-width: 0; position: sticky; top: 12px;
+  flex: 0 0 420px; position: sticky; top: 12px;
   /* Its own scrollbar rather than the page's: a twenty-sheet order should not
      make the drawings beside it scroll past. */
   max-height: calc(100vh - 24px); overflow-y: auto;
 }
 .plan-body > .materials h2 { margin-top: 0; }
-@media (max-width: 1100px) {
-  .plan-body { flex-wrap: wrap; }
+/* Two columns need 340 for a drawing, 420 for the bill and the gap between —
+   and the sidebar has taken 290 before any of that. Under it they stack, and a
+   bill with nothing beside it has nothing to stay in view for. */
+@media (max-width: 1250px) {
   .plan-body > .materials { position: static; max-height: none; flex: 0 0 100%; }
+  .plan-body > .sheets { flex: 0 0 100%; }
 }
 /* The sheets wrap with flex, so a heading would otherwise sit alongside the
    first drawing under it. */
