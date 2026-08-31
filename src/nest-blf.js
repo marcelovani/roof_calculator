@@ -290,7 +290,16 @@ export function createSearch(pieces, config, opts = {}) {
     const mix = mixOf(result.sheets);
     const key = `${result.cost.toFixed(2)}|${mix}`;
     if (top.some((t) => t.key === key)) return result;
-    top.push({ key, cost: result.cost, sheets: result.sheets.length, mix, order: ord.slice(), turns: trn.slice() });
+    // Worked out here, where the plan is already in hand. A row in the list has
+    // only the recipe, and rebuilding ten plans on every redraw to ask how much
+    // sheet each wastes is a lot of packing for one percentage.
+    const bought = result.sheets.reduce((a, x) => a + x.sheet.width * x.sheet.length, 0);
+    const laid = result.sheets.reduce((a, x) => a + x.placements.reduce((b, p) => b + p.block.area, 0), 0);
+    top.push({
+      key, cost: result.cost, sheets: result.sheets.length, mix,
+      used: bought ? laid / bought : 0,
+      order: ord.slice(), turns: trn.slice(),
+    });
     top.sort((a, b) => a.cost - b.cost || a.sheets - b.sheets);
     top.length = Math.min(top.length, TOP);
     return result;
@@ -313,7 +322,7 @@ export function createSearch(pieces, config, opts = {}) {
     },
     best: () => dress(best),
     /** The ten on offer, cheapest first. */
-    plans: () => top.map((t) => ({ key: t.key, cost: t.cost, sheets: t.sheets, mix: t.mix, order: t.order, turns: t.turns })),
+    plans: () => top.map((t) => ({ key: t.key, cost: t.cost, sheets: t.sheets, mix: t.mix, used: t.used, order: t.order, turns: t.turns })),
     /**
      * Plans found on an earlier visit, taken on as this search's own.
      *
@@ -328,7 +337,7 @@ export function createSearch(pieces, config, opts = {}) {
       for (const r of rows) {
         if (!Array.isArray(r.order) || r.order.length !== shapes.length) continue;
         if (!Array.isArray(r.turns) || r.turns.length !== shapes.length) continue;
-        top.push({ key: r.key, cost: r.cost, sheets: r.sheets, mix: r.mix, order: r.order.slice(), turns: r.turns.slice() });
+        top.push({ key: r.key, cost: r.cost, sheets: r.sheets, mix: r.mix, used: r.used, order: r.order.slice(), turns: r.turns.slice() });
       }
       top.sort((a, b) => a.cost - b.cost || a.sheets - b.sheets);
       top.length = Math.min(top.length, TOP);

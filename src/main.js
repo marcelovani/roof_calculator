@@ -3,7 +3,7 @@ import { plan } from './nest.js';
 import { createSearch, shrinkPieces } from './nest-blf.js';
 import { fillPrompt, pieceList, planJson, promptTemplate, readPlan, sheetList } from './aiplan.js';
 import * as store from './store.js';
-import { EDGE_NAMES, renderCutPlan, renderOrder, renderPieceEditor, renderPiecePreview, renderPieces, renderDesigns, renderRoof, renderSheetPicker, renderSheets, sqm } from './render.js';
+import { EDGE_NAMES, renderCutPlan, renderOrder, renderPieceEditor, renderPiecePreview, renderPieces, renderDesigns, renderRoof, renderSheetPicker, renderSheets, sqm, usage } from './render.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -97,10 +97,13 @@ function renderSummary(pieces, result, problems, units) {
   // drawn from the same result.
   const sheets = result.sheets || [];
   const priced = sheets.length && sheets.every((s) => s.sheet.price != null);
+  const spent = usage(result);
   const order = sheets.length
     ? `<li class="grand"><span>order</span>
         <b>${priced ? '&pound;' + result.cost.toFixed(2) : '&mdash;'}</b>
-        <span class="muted">${sheets.length} sheet${sheets.length === 1 ? '' : 's'}</span></li>`
+        <span class="muted">${sheets.length} sheet${sheets.length === 1 ? '' : 's'}</span></li>
+       <li class="grand"><span>sheet used</span><b>${Math.round(spent.ratio * 100)}%</b>
+        <span class="muted">${sqm(spent.used, units)} of ${sqm(spent.total, units)} m&sup2;</span></li>`
     : '';
 
   $('#summary').innerHTML = `<ul class="totals">${bySide}
@@ -422,7 +425,10 @@ function savePlans() {
     .map((r) => {
       const recipe = state.opt.searches[r.search]?.search.plans().find((p) => p.key === r.key);
       return (
-        recipe && { shrink: r.shrink || 0, key: r.key, cost: r.cost, sheets: r.sheets, mix: r.mix, order: recipe.order, turns: recipe.turns }
+        recipe && {
+          shrink: r.shrink || 0, key: r.key, cost: r.cost, sheets: r.sheets, mix: r.mix,
+          used: recipe.used, order: recipe.order, turns: recipe.turns,
+        }
       );
     })
     .filter(Boolean);
@@ -437,6 +443,12 @@ function savePlans() {
 function restorePlans(nestable) {
   const saved = state.store.settings.savedPlans;
   if (!saved || saved.sig !== state.opt.sig || !Array.isArray(saved.rows) || !saved.rows.length) return;
+  // A set written before a row carried how much sheet it wastes. Working it out
+  // now means packing all ten again on the way in, and living with it means a
+  // column of dashes that never fills, so the set is let go instead: two
+  // minutes of Optimise, once, and only for a browser that searched before the
+  // column existed.
+  if (saved.rows.some((r) => typeof r.used !== 'number')) return;
 
   // One search per amount of slack, because that is what a search is made with.
   const byShrink = new Map();
@@ -554,6 +566,9 @@ function planControls(fast, result = fast) {
             <td class="num">${r.sheets}</td>
             <td class="num">&pound;${r.cost.toFixed(2)}</td>
             <td class="num">${saved > 0.005 ? `&minus;&pound;${saved.toFixed(2)}` : '&mdash;'}</td>
+            <td class="num used" title="How much of the sheet you buy ends up on the roof">${
+              r.used ? `${Math.round(r.used * 100)}%` : '&mdash;'
+            }</td>
             <td>${r.shrink ? `<span class="tag">${TRIAL(r.shrink)}</span>` : ''}</td>
             <td class="mix" title="${esc(r.mix)}">${esc(r.mix)}</td>
             <td><button class="exportrow" data-plan="${esc(r.id)}"
