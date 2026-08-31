@@ -277,56 +277,69 @@ export function renderCutPlan(result, config) {
   // visible past the edge or the red line means nothing.
   const widest = Math.max(...result.sheets.map((s) => s.sheet.width + Math.max(0, overrunOf(s))));
   const scale = Math.min(SHEET_MAX_H / longest, SHEET_MAX_W / widest);
-  return result.sheets
-    .map((s, i) => {
-      const over = Math.max(0, overrunOf(s));
-      const w = s.sheet.width * scale;
-      const h = s.sheet.length * scale;
-      const canvas = (s.sheet.width + over) * scale;
-      const used = s.placements.reduce((sum, p) => sum + p.block.area, 0);
-      const shapes = s.placements
-        .flatMap((p) =>
-          p.block.placements.map((pl) => {
-            const colour = SIDE_COLOURS[pl.piece.side] || '#888';
-            // Area centroid, not bounding-box centre: two interlocked triangles
-            // share a bounding box and their labels would land on top of each other.
-            const c = centroid(pl.vertices);
-            const cx = (p.x + c.x) * scale;
-            const cy = h - (p.y + c.y) * scale;
-            return `<polygon points="${points(pl.vertices, scale, h, p.x, p.y)}" fill="${colour}33" stroke="${colour}" stroke-width="1"/>
-              ${edgeLabels(pl.vertices, edgeValues(pl.piece, false), scale, h, p.x, p.y)}
-              <text class="piece-num" x="${cx.toFixed(1)}" y="${cy.toFixed(1)}">${esc(pl.piece.id)}${pl.orientation ? '&#8635;' : ''}</text>`;
-          })
-        )
-        .join('');
-      // Dashed and red at the width the shop sells, so what sits to the right of
-      // it is exactly what you are trusting the tolerance for.
-      const edge = over
-        ? `<line class="over-line" x1="${w.toFixed(1)}" y1="0" x2="${w.toFixed(1)}" y2="${h.toFixed(1)}"/>`
-        : '';
-      return `<figure class="sheet">
-        <svg viewBox="0 0 ${canvas.toFixed(1)} ${h.toFixed(1)}" width="${canvas.toFixed(1)}" height="${h.toFixed(1)}">
-          <rect x="0" y="0" width="${w.toFixed(1)}" height="${h.toFixed(1)}" class="offcut"/>
-          <rect x="${(margin * scale).toFixed(1)}" y="${(margin * scale).toFixed(1)}"
-                width="${((s.sheet.width - 2 * margin) * scale).toFixed(1)}"
-                height="${((s.sheet.length - 2 * margin) * scale).toFixed(1)}" class="usable"/>
-          ${shapes}
-          <rect x="0.75" y="0.75" width="${(w - 1.5).toFixed(1)}" height="${(h - 1.5).toFixed(1)}" class="sheet-edge"/>
-          ${edge}
-        </svg>
-        <figcaption><b>Sheet ${i + 1}</b> — ${esc(s.sheet.id)}
-          <span class="muted">${fmt(s.sheet.width)} &times; ${fmt(s.sheet.length)} &middot;
-            ${Math.round((used / (s.sheet.width * s.sheet.length)) * 100)}% used</span>
-          ${
-            over
-              ? `<span class="over">Runs ${fmt(over)} cm past the red line — ${fmt(s.sheet.width + over)} cm
-                  wanted across a ${fmt(s.sheet.width)} cm sheet. Within the ${fmt(allowance)} cm allowed, but
-                  it only cuts if the sheet and the pieces are both as measured.</span>`
-              : allowance
-                ? `<span class="muted">Fits the ${fmt(s.sheet.width)} cm without using the ${fmt(allowance)} cm allowance.</span>`
-                : ''
-          }</figcaption>
-      </figure>`;
+  // Every sheet of one size says the same width and length, so it is said once
+  // in a heading and the drawings under it carry only what differs.
+  const groups = new Map();
+  result.sheets.forEach((s, i) => {
+    if (!groups.has(s.sheet.id)) groups.set(s.sheet.id, []);
+    groups.get(s.sheet.id).push({ s, i });
+  });
+  const drawing = ({ s, i }) => {
+    const over = Math.max(0, overrunOf(s));
+    const w = s.sheet.width * scale;
+    const h = s.sheet.length * scale;
+    const canvas = (s.sheet.width + over) * scale;
+    const used = s.placements.reduce((sum, p) => sum + p.block.area, 0);
+    const shapes = s.placements
+      .flatMap((p) =>
+        p.block.placements.map((pl) => {
+          const colour = SIDE_COLOURS[pl.piece.side] || '#888';
+          // Area centroid, not bounding-box centre: two interlocked triangles
+          // share a bounding box and their labels would land on top of each other.
+          const c = centroid(pl.vertices);
+          const cx = (p.x + c.x) * scale;
+          const cy = h - (p.y + c.y) * scale;
+          return `<polygon points="${points(pl.vertices, scale, h, p.x, p.y)}" fill="${colour}33" stroke="${colour}" stroke-width="1"/>
+            ${edgeLabels(pl.vertices, edgeValues(pl.piece, false), scale, h, p.x, p.y)}
+            <text class="piece-num" x="${cx.toFixed(1)}" y="${cy.toFixed(1)}">${esc(pl.piece.id)}${pl.orientation ? '&#8635;' : ''}</text>`;
+        })
+      )
+      .join('');
+    // Dashed and red at the width the shop sells, so what sits to the right of
+    // it is exactly what you are trusting the tolerance for.
+    const edge = over
+      ? `<line class="over-line" x1="${w.toFixed(1)}" y1="0" x2="${w.toFixed(1)}" y2="${h.toFixed(1)}"/>`
+      : '';
+    return `<figure class="sheet">
+      <svg viewBox="0 0 ${canvas.toFixed(1)} ${h.toFixed(1)}" width="${canvas.toFixed(1)}" height="${h.toFixed(1)}">
+        <rect x="0" y="0" width="${w.toFixed(1)}" height="${h.toFixed(1)}" class="offcut"/>
+        <rect x="${(margin * scale).toFixed(1)}" y="${(margin * scale).toFixed(1)}"
+              width="${((s.sheet.width - 2 * margin) * scale).toFixed(1)}"
+              height="${((s.sheet.length - 2 * margin) * scale).toFixed(1)}" class="usable"/>
+        ${shapes}
+        <rect x="0.75" y="0.75" width="${(w - 1.5).toFixed(1)}" height="${(h - 1.5).toFixed(1)}" class="sheet-edge"/>
+        ${edge}
+      </svg>
+      <figcaption><b>Sheet ${i + 1}</b>
+        <span class="muted">${Math.round((used / (s.sheet.width * s.sheet.length)) * 100)}% used</span>
+        ${
+          over
+            ? `<span class="over">Runs ${fmt(over)} cm past the red line — ${fmt(s.sheet.width + over)} cm
+                wanted across a ${fmt(s.sheet.width)} cm sheet. Within the ${fmt(allowance)} cm allowed, but
+                it only cuts if the sheet and the pieces are both as measured.</span>`
+            : allowance
+              ? `<span class="muted">Fits the ${fmt(s.sheet.width)} cm without using the ${fmt(allowance)} cm allowance.</span>`
+              : ''
+        }</figcaption>
+    </figure>`;
+  };
+  return [...groups.values()]
+    .map((group) => {
+      const { sheet } = group[0].s;
+      return `<h2 class="sheet-heading">${esc(sheet.id)}
+        <span class="muted">${fmt(sheet.width)} &times; ${fmt(sheet.length)} &middot;
+          ${group.length} sheet${group.length === 1 ? '' : 's'}</span></h2>
+        ${group.map(drawing).join('')}`;
     })
     .join('');
 }

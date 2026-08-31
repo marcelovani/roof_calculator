@@ -313,7 +313,27 @@ export function createSearch(pieces, config, opts = {}) {
     },
     best: () => dress(best),
     /** The ten on offer, cheapest first. */
-    plans: () => top.map((t) => ({ key: t.key, cost: t.cost, sheets: t.sheets, mix: t.mix })),
+    plans: () => top.map((t) => ({ key: t.key, cost: t.cost, sheets: t.sheets, mix: t.mix, order: t.order, turns: t.turns })),
+    /**
+     * Plans found on an earlier visit, taken on as this search's own.
+     *
+     * The search keeps a recipe rather than a plan — an order and a set of half
+     * turns — so what a browser has to remember is small, and handing the recipe
+     * back is enough to draw the plan again. An order of the wrong length is a
+     * different roof and is dropped: the signature should have caught it, and if
+     * it has not, a plan built from the wrong pieces is worse than none.
+     */
+    adopt(rows) {
+      top.length = 0;
+      for (const r of rows) {
+        if (!Array.isArray(r.order) || r.order.length !== shapes.length) continue;
+        if (!Array.isArray(r.turns) || r.turns.length !== shapes.length) continue;
+        top.push({ key: r.key, cost: r.cost, sheets: r.sheets, mix: r.mix, order: r.order.slice(), turns: r.turns.slice() });
+      }
+      top.sort((a, b) => a.cost - b.cost || a.sheets - b.sheets);
+      top.length = Math.min(top.length, TOP);
+      return top.length;
+    },
     /** One of them, packed again — the search keeps the recipe, not the plan. */
     rebuild(key) {
       const found = top.find((t) => t.key === key);

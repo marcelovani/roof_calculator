@@ -340,7 +340,10 @@ function draw() {
   const { pieces, problems } = toPieces(data);
   const nestable = pieces.filter((p) => p.vertices);
   const sig = signature(nestable, data.sheets, data.allowance);
-  if (sig !== state.opt.sig) resetSearches(sig);
+  if (sig !== state.opt.sig) {
+    resetSearches(sig);
+    restorePlans(nestable);
+  }
   // The trial slack is part of the plan on the screen, not only of a search:
   // the box that asks for it is the answer to "nothing ticked fits these
   // pieces", and an answer that changed nothing below it would be no answer.
@@ -376,6 +379,61 @@ const fmt1 = (n) => String(Math.round(n * 10) / 10);
 
 const SHOWN = 10;
 const TRIAL_SHARE = 5;
+
+/**
+ * The ten on offer, written down so a reload does not throw them away.
+ *
+ * Six minutes of searching is a real cost, and until now a refresh spent it
+ * again. What is kept is the recipe each plan was built from — an order and a
+ * set of half turns — not the plan itself, which is a few numbers rather than a
+ * drawing, and which the nester turns back into the same plan every time.
+ *
+ * The signature goes with them. It is the roof and the ticked sheets rolled
+ * into a string, so a plan is only ever offered back for the roof it was found
+ * on; change a measurement and the saved ten are simply not restored.
+ */
+function savePlans() {
+  const rows = offers()
+    .map((r) => {
+      const recipe = state.opt.searches[r.search]?.search.plans().find((p) => p.key === r.key);
+      return (
+        recipe && { shrink: r.shrink || 0, key: r.key, cost: r.cost, sheets: r.sheets, mix: r.mix, order: recipe.order, turns: recipe.turns }
+      );
+    })
+    .filter(Boolean);
+  // The chosen one is remembered by what it is, not by where it sat in the
+  // list: the list is rebuilt on the way back in and the positions move.
+  const picked = state.opt.chosen ? offers().find((r) => r.id === state.opt.chosen) : null;
+  const chosen = picked ? { key: picked.key, shrink: picked.shrink || 0 } : null;
+  setSetting('savedPlans', rows.length ? { sig: state.opt.sig, chosen, rows } : null);
+}
+
+/** Those ten handed back to a search that can draw them again. */
+function restorePlans(nestable) {
+  const saved = state.store.settings.savedPlans;
+  if (!saved || saved.sig !== state.opt.sig || !Array.isArray(saved.rows) || !saved.rows.length) return;
+
+  // One search per amount of slack, because that is what a search is made with.
+  const byShrink = new Map();
+  for (const row of saved.rows) {
+    const key = Number(row.shrink) || 0;
+    if (!byShrink.has(key)) byShrink.set(key, []);
+    byShrink.get(key).push(row);
+  }
+  for (const [shrink, rows] of byShrink) {
+    const search = createSearch(nestable, state.data, { shrink, seed: state.opt.searches.length + 1 });
+    if (search.adopt(rows)) state.opt.searches.push({ search, shrink });
+  }
+
+  if (!saved.chosen) return;
+  const row = offers().find((r) => r.key === saved.chosen.key && (r.shrink || 0) === (saved.chosen.shrink || 0));
+  const rebuilt = row && state.opt.searches[row.search].search.rebuild(row.key);
+  if (rebuilt) {
+    state.opt.plan = rebuilt;
+    state.opt.chosen = row.id;
+    state.opt.pinned = true;
+  }
+}
 
 /**
  * Every plan any search has found, cheapest first, tagged with which search.
@@ -536,6 +594,7 @@ function wireOptimise(nestable, fast) {
 
   $('#clearsearches')?.addEventListener('click', () => {
     resetSearches(opt.sig);
+    setSetting('savedPlans', null);
     draw();
   });
 
@@ -555,6 +614,7 @@ function wireOptimise(nestable, fast) {
     opt.plan = null;
     opt.chosen = null;
     opt.pinned = true;
+    savePlans();
     draw();
   });
 
@@ -574,7 +634,9 @@ function wireOptimise(nestable, fast) {
       return opt.plan;
     };
     const pick = () => {
-      if (choose()) draw();
+      if (!choose()) return;
+      savePlans();
+      draw();
     };
     // Exporting a row draws it as well: what leaves for the model and what is
     // on the screen being two different plans is the one confusion worth ruling
@@ -602,6 +664,7 @@ function wireOptimise(nestable, fast) {
     if (opt.timer) clearTimeout(opt.timer);
     opt.timer = null;
     opt.active = null;
+    savePlans();
   };
 
   const start = (shrink, { keepPinned = false } = {}) => {
@@ -625,6 +688,10 @@ function wireOptimise(nestable, fast) {
       // where a longer run of one is worth two. It runs until it is stopped,
       // which is what the button has always said it does.
       if (search.round >= ROUNDS) {
+        // The boundary between seeds is where the list is written down. Saving
+        // on every improvement would put the whole store through localStorage a
+        // few times a minute; saving only on Stop would lose an unattended run.
+        savePlans();
         start(opt.reduce, { keepPinned: true });
         return;
       }

@@ -126,6 +126,9 @@ export function fromDefaults(cutsDoc, sheetsDoc, name = 'My roof') {
       allowance: Number(sheetsDoc.allowance) || 0,
       pastedPlan: '',
       pastedDraft: '',
+      // The ten plans the last search left, as recipes rather than drawings,
+      // stamped with the roof they belong to. Null until a search has run.
+      savedPlans: null,
     },
   };
 }

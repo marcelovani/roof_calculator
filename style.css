@@ -386,7 +386,8 @@ button.danger:hover { background: #c0392b; color: #fff; }
 #cutplan > .plan-controls,
 #cutplan > .hint,
 #cutplan > table.offers,
-#cutplan > .materials { flex: 0 0 100%; max-width: none; }
+#cutplan > .materials,
+.sheets > .sheet-heading { flex: 0 0 100%; max-width: none; }
 
 
 /* The designs kept in this browser. */
@@ -440,3 +441,17 @@ table.offers .exportrow { font-size: 11px; padding: 3px 7px; white-space: nowrap
 /* The width the shop actually sells, on a sheet packed past it. */
 .over-line { stroke: #c0392b; stroke-width: 1.5; stroke-dasharray: 5 3; }
 .sheet figcaption .over { display: block; margin-top: 3px; color: #c0392b; font-size: 11px; line-height: 1.4; }
+
+/* One heading per sheet size, so the width and length are said once instead of
+   on every drawing under it. */
+.sheets > .sheet-heading {
+  font-size: 13px; margin: 18px 0 0; display: flex; align-items: baseline; gap: 8px;
+}
+.sheets > .sheet-heading .muted { font-size: 12px; font-weight: 400; }
+/* The caption sits beside the drawing rather than under it: the notice is a
+   couple of sentences long and would otherwise set the card's width. */
+.sheet { display: flex; align-items: flex-start; gap: 10px; }
+.sheet figcaption {
+  flex-direction: column; align-items: flex-start; gap: 3px;
+  width: 150px; margin-top: 0;
+}
