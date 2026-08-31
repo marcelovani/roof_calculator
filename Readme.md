@@ -149,7 +149,10 @@ falls back to minimising sheet area, which here gives the same answer.
 `kerf` is the saw width lost at every cut, in cm — `0.5` for a 5 mm blade. Set it
 to `0` if you are not cutting between adjacent pieces. `margin` is an unusable
 strip at the sheet edge, defaulting to `0` because these widths are meant to be
-used whole.
+used whole. `allowance` is the tolerance: how much wider than the sheet says a
+run of pieces may come out, across the sheet only. The file's number is only the
+starting point — the box on the **Cut plan** tab is where you change it, and what
+you type there is kept in the browser with the rest of the settings.
 
 ## The roof from above
 
@@ -332,7 +335,7 @@ re-enable it to chase yield.
 - `index.html`, `style.css` — page and styling
 - `serve.mjs` — the dev server; serves the site and saves `cuts.json`
 - `data/cuts.json` — your measurements; nothing but you writes to this
-- `data/sheets.json` — the priced sheet catalogue and the kerf/margin settings
+- `data/sheets.json` — the priced sheet catalogue and the kerf/margin/tolerance defaults
 - `data/example-cuts.json` — a worked 28-piece hipped roof, 69 cm panels
 - `src/geometry.js` — edge lists to polygons, areas, half turns
 - `src/nest.js` — pairing and shelf packing, quick enough for every keystroke

@@ -298,6 +298,8 @@ export function createSearch(pieces, config, opts = {}) {
 
   const pack = (ord, trn) => record(packQueue(entries(shapes, ord, trn), sheetTypes, kerf, margin, allowance), ord, trn);
   let best = sheetTypes.length ? pack(order, turns) : null;
+  // What the search is standing on, which is not always the best it has seen.
+  let current = best ? best.cost : Infinity;
 
   return {
     get round() {
@@ -333,10 +335,19 @@ export function createSearch(pieces, config, opts = {}) {
           nextTurns[i] = !nextTurns[i];
         }
         const trial = pack(nextOrder, nextTurns);
-        if (trial && (!best || trial.cost < best.cost - EPS)) {
-          best = trial;
+        if (!trial) continue;
+        // A plan that costs the same is walked to anyway. Cost only moves when a
+        // whole sheet does, so nearly every step is level ground; refusing to
+        // cross it leaves the search sitting on the first plateau it meets, and
+        // never finds the step down on the far side. `best` is untouched by this
+        // — it is still only ever replaced by something strictly cheaper.
+        if (trial.cost <= current + EPS) {
+          current = trial.cost;
           order = nextOrder;
           turns = nextTurns;
+        }
+        if (!best || trial.cost < best.cost - EPS) {
+          best = trial;
           improved = true;
         }
       }

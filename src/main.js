@@ -169,6 +169,9 @@ function useStore() {
   const { sheets, settings } = state.store;
   state.data = {
     ...state.defaults.sheets,
+    // The tolerance is typed on the cut plan and kept with the settings; a
+    // store written before that box existed falls back to the file's number.
+    allowance: Number(settings.allowance ?? state.defaults.sheets.allowance) || 0,
     sheets: store.pickedSheets(state.store),
     note: design.note,
     cuts: design.cuts,
@@ -320,12 +323,14 @@ function materials(result, data) {
  * What a plan was made from, so an edit retires it.
  *
  * The sheets are in it as well as the pieces: untick a size, or change a price,
- * and a finished search is a plan built out of sheets you no longer want.
+ * and a finished search is a plan built out of sheets you no longer want. So is
+ * the tolerance — it is how wide a sheet is allowed to be packed, so every plan
+ * found under the old one was packed to a sheet of another width.
  */
-const signature = (pieces, sheets) =>
+const signature = (pieces, sheets, allowance) =>
   `${pieces.map((p) => `${p.id}:${p.edges.join(',')}`).join('|')}#${sheets
     .map((s) => `${s.id}:${s.width}x${s.length}:${s.price}`)
-    .join(',')}`;
+    .join(',')}@${allowance}`;
 
 function draw() {
   // Everything drawn is derived from the store, every time. Anything less and a
@@ -334,7 +339,7 @@ function draw() {
   const data = state.data;
   const { pieces, problems } = toPieces(data);
   const nestable = pieces.filter((p) => p.vertices);
-  const sig = signature(nestable, data.sheets);
+  const sig = signature(nestable, data.sheets, data.allowance);
   if (sig !== state.opt.sig) resetSearches(sig);
   // The trial slack is part of the plan on the screen, not only of a search:
   // the box that asks for it is the answer to "nothing ticked fits these
@@ -441,10 +446,17 @@ function planControls(fast, result = fast) {
     ? `<label class="reduce">every piece
         <input id="reduce" type="number" step="0.5" min="0" value="${esc(reduce)}"${active ? ' disabled' : ''}> cm smaller</label>`
     : '';
-  if (!fast.sheets.length) return `${picker}${nowhere}${reducer ? `<div class="plan-controls">${reducer}</div>` : ''}`;
+  // The tolerance decides what fits across a sheet, so it belongs next to the
+  // button that spends a minute working out what fits — not in a file you have
+  // to edit and reload to try another number against. Always shown: nought is
+  // as much a choice as one, and this is the only way back to it.
+  const slack = `<label class="tolerance" title="A run of pieces measured off a roof adds up to a little more than the roof is. This is how much of that the plan may take across the sheet — along it the same slack would cost a whole sheet, so it is not given there.">tolerance
+      <input id="allowance" type="number" step="0.1" min="0" value="${esc(fmt1(state.data.allowance))}"${active ? ' disabled' : ''}> cm across the sheet</label>`;
+  if (!fast.sheets.length) return `${picker}${nowhere}<div class="plan-controls">${slack}${reducer}</div>`;
   const rows = offers();
   const status = active
-    ? `<span class="muted">round ${active.round} &middot; ${active.sheets} sheets &middot; &pound;${active.cost.toFixed(2)}</span>`
+    ? `<span class="muted">search ${state.opt.searches.length} &middot; round ${active.round} &middot;
+       ${active.sheets} sheets &middot; &pound;${active.cost.toFixed(2)}</span>`
     : rows.length
       ? `<span class="muted">${rows.length} plans found. The quick nester's is ${fast.sheets.length} sheets,
          &pound;${fast.cost.toFixed(2)}.</span>`
@@ -479,6 +491,7 @@ function planControls(fast, result = fast) {
   // One button, three jobs: start, stop, start again. Starting again adds to the
   // list rather than replacing it, which is what "more" is saying.
   return `${picker}${nowhere}<div class="plan-controls">
+    ${slack}
     ${reducer}
     <button id="optimise">${active ? 'Stop' : rows.length ? 'Optimise more' : 'Optimise'}</button>
     ${state.opt.plan ? '<button id="dropoptimise">Back to the quick plan</button>' : ''}
@@ -508,6 +521,17 @@ function wireOptimise(nestable, fast) {
     opt.reduce = next;
     draw();
     $('#reduce')?.focus();
+  });
+
+  // Kept the moment it changes, and redrawn with it: the tolerance is what both
+  // nesters pack to, so the plan under the box has to be the plan for the number
+  // in the box. Every search packed to the old number retires with it.
+  $('#allowance')?.addEventListener('change', (event) => {
+    const next = Math.max(0, Number(event.target.value) || 0);
+    if (next === state.data.allowance) return;
+    setSetting('allowance', next);
+    draw();
+    $('#allowance')?.focus();
   });
 
   $('#clearsearches')?.addEventListener('click', () => {
@@ -580,11 +604,11 @@ function wireOptimise(nestable, fast) {
     opt.active = null;
   };
 
-  const start = (shrink) => {
+  const start = (shrink, { keepPinned = false } = {}) => {
     const search = createSearch(nestable, state.data, { shrink, seed: opt.searches.length + 1 });
     opt.searches.push({ search, shrink });
     opt.active = search;
-    opt.pinned = false;
+    if (!keepPinned) opt.pinned = false;
 
     const tick = () => {
       if (opt.active !== search) return;
@@ -595,15 +619,21 @@ function wireOptimise(nestable, fast) {
         const best = offers()[0];
         if (best) show(best);
       }
+      // A seed is one hill, and it is climbed out in a few hundred rounds. Rather
+      // than stop there, the next one starts from somewhere else and its plans
+      // join the list — twelve seeds are worth about ten per cent on this roof,
+      // where a longer run of one is worth two. It runs until it is stopped,
+      // which is what the button has always said it does.
       if (search.round >= ROUNDS) {
-        stop();
-        draw();
+        start(opt.reduce, { keepPinned: true });
         return;
       }
       if (improved) draw();
       else {
         const label = $('#cutplan .plan-controls .muted');
-        if (label) label.textContent = `round ${search.round} \u00b7 ${search.sheets} sheets \u00b7 £${search.cost.toFixed(2)}`;
+        if (label) {
+          label.textContent = `search ${opt.searches.length} \u00b7 round ${search.round} \u00b7 ${search.sheets} sheets \u00b7 £${search.cost.toFixed(2)}`;
+        }
       }
       opt.timer = setTimeout(tick, 0);
     };
