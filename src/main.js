@@ -18,7 +18,7 @@ const state = { store: null, defaults: null, data: null, sheet: null, design: nu
   // Every search run on the current measurements, everything they found, and
   // which of it is on the screen. Kept apart from the fast plan so a keystroke
   // never waits on a search.
-  opt: { sig: '', searches: [], active: null, chosen: null, plan: null, pinned: false, timer: null, reduce: 0 } };
+  opt: { sig: '', searches: [], active: null, chosen: null, plan: null, pinned: false, timer: null, reduce: 0, startedAt: 0, ranOut: false } };
 
 /**
  * Everything remembered goes through here, so there is one moment where the
@@ -516,10 +516,10 @@ function planControls(fast, result = fast) {
     ? `<span class="muted">search ${state.opt.searches.length} &middot; round ${active.round} &middot;
        ${active.sheets} sheets &middot; &pound;${active.cost.toFixed(2)}</span>`
     : rows.length
-      ? `<span class="muted">${rows.length} plans found. The quick nester's is ${fast.sheets.length} sheets,
-         &pound;${fast.cost.toFixed(2)}.</span>`
+      ? `<span class="muted">${rows.length} plans found${state.opt.ranOut ? ' in two minutes — Optimise more carries on from here' : ''}.
+         The quick nester's is ${fast.sheets.length} sheets, &pound;${fast.cost.toFixed(2)}.</span>`
       : `<span class="muted">${fast.sheets.length} sheets, &pound;${fast.cost.toFixed(2)} from the quick nester.
-         A search takes a minute or so and only ever improves on it.</span>`;
+         A search runs for two minutes and only ever improves on it.</span>`;
 
   const list = rows.length
     ? `<table class="offers"><tbody>${rows
@@ -568,6 +568,11 @@ function planControls(fast, result = fast) {
  */
 function wireOptimise(nestable, fast) {
   const ROUNDS = 500;
+  // Two minutes, then it hands back. Left to itself the search runs until it is
+  // stopped, and on a roof this size it has found what it is going to find well
+  // inside that — so the rest is a warm laptop and a button nobody pressed.
+  // Optimise more picks up where it left off, with the ten already found kept.
+  const RUN_MS = 2 * 60 * 1000;
   const opt = state.opt;
 
   // Redrawn rather than stored and forgotten: the plan below is nested from the
@@ -675,6 +680,14 @@ function wireOptimise(nestable, fast) {
 
     const tick = () => {
       if (opt.active !== search) return;
+      // Every plan tried is already in the list, so stopping part way through a
+      // seed throws nothing away.
+      if (opt.startedAt && Date.now() - opt.startedAt >= RUN_MS) {
+        opt.ranOut = true;
+        stop();
+        draw();
+        return;
+      }
       const improved = search.step(1);
       // Follow the search while it is running, unless a plan has been picked by
       // hand — then it stays put and the new ones simply join the list.
@@ -721,6 +734,8 @@ function wireOptimise(nestable, fast) {
     // The box is only on the page when something needs shrinking; without it
     // the slack is nought and the search is on the pieces as measured.
     opt.reduce = Math.max(0, Number($('#reduce')?.value) || 0);
+    opt.startedAt = Date.now();
+    opt.ranOut = false;
     start(opt.reduce);
   });
 }
