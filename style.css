@@ -18,16 +18,23 @@ body {
   background: var(--bg);
 }
 
+/* It scrolls with the page rather than inside itself.
+ *
+ * Pinned at full viewport height it had a scrollbar of its own, and the notes
+ * at the foot run past 100vh on a laptop — so the page could be at its very
+ * bottom with the last of the sidebar still below the fold, reachable only by
+ * knowing to put the pointer over it first. Nothing said so. The price and the
+ * areas sit at the top where they are read anyway, and the Materials column on
+ * the cut plan carries the total for the rest of the page.
+ */
 .sidebar {
   width: 290px;
   flex: 0 0 290px;
-  padding: 20px;
+  padding: 20px 20px 60px;
   background: var(--panel);
   border-right: 1px solid var(--line);
-  overflow-y: auto;
-  height: 100vh;
-  position: sticky;
-  top: 0;
+  align-self: flex-start;
+  min-height: 100vh;
 }
 
 .sidebar h1 { font-size: 17px; margin: 0 0 10px; }
@@ -137,7 +144,12 @@ figcaption { display: flex; justify-content: space-between; gap: 10px; font-size
 /* .sheets sets display:flex, which would otherwise beat the hidden attribute. */
 .panel[hidden] { display: none; }
 
-table.order { border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; min-width: 460px; }
+/* Comfortable at 460, but never wider than what it has been given: below that
+   the columns squeeze rather than running off the side of the page. */
+table.order {
+  border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  min-width: min(460px, 100%); max-width: 100%;
+}
 table.order th, table.order td { padding: 8px 14px; border-bottom: 1px solid var(--line); text-align: left; }
 table.order th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 table.order .num { text-align: right; }
@@ -310,7 +322,16 @@ table.offers tr:hover { background: var(--panel); }
 table.offers tr.chosen { background: var(--panel); font-weight: 600; }
 table.offers tr.chosen td:first-child { box-shadow: inset 3px 0 var(--muted); }
 table.offers td { padding: 5px 8px; }
-table.offers td.mix { color: var(--muted); font-weight: 400; }
+/* The mix is the longest thing in the row and the least urgent, so it is the one
+   that gives: it clips to an ellipsis and keeps its full text in a tooltip. The
+   max-width of nought is what lets a cell in an auto-layout table shrink at all,
+   and so is what makes the ellipsis appear. The button never gives — a control
+   you cannot reach is worse than a description you cannot finish reading. */
+table.offers td.mix {
+  color: var(--muted); font-weight: 400;
+  max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+table.offers td.num, table.offers td:last-child { width: 1%; white-space: nowrap; }
 table.offers .tag { background: #a8402c; color: #fff; border-radius: 3px; padding: 1px 5px; font-size: 10px; white-space: nowrap; }
 
 .tabs .print { margin-left: auto; }
@@ -389,7 +410,7 @@ button.danger:hover { background: #c0392b; color: #fff; }
 .plan-body { display: flex; align-items: flex-start; gap: 20px; }
 .plan-body > .sheets { flex: 1 1 auto; min-width: 0; }
 .plan-body > .materials {
-  flex: 0 0 auto; position: sticky; top: 12px;
+  flex: 0 1 auto; min-width: 0; position: sticky; top: 12px;
   /* Its own scrollbar rather than the page's: a twenty-sheet order should not
      make the drawings beside it scroll past. */
   max-height: calc(100vh - 24px); overflow-y: auto;

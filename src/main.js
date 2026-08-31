@@ -555,7 +555,7 @@ function planControls(fast, result = fast) {
             <td class="num">&pound;${r.cost.toFixed(2)}</td>
             <td class="num">${saved > 0.005 ? `&minus;&pound;${saved.toFixed(2)}` : '&mdash;'}</td>
             <td>${r.shrink ? `<span class="tag">${TRIAL(r.shrink)}</span>` : ''}</td>
-            <td class="mix">${esc(r.mix)}</td>
+            <td class="mix" title="${esc(r.mix)}">${esc(r.mix)}</td>
             <td><button class="exportrow" data-plan="${esc(r.id)}"
               title="Draw this one, and take it to the AI tab">Export to AI</button></td></tr>`;
         })
