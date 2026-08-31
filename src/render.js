@@ -344,6 +344,20 @@ export function renderCutPlan(result, config) {
     .join('');
 }
 
+/**
+ * How much of what you buy ends up on the roof.
+ *
+ * The one number that says whether a plan is good without knowing the roof: two
+ * plans a pound apart are the same plan, and the one that wastes less sheet is
+ * the one to cut. Said in the order list, on every row of the results, and in
+ * the sidebar, all from here so they cannot disagree.
+ */
+export function usage(result) {
+  const total = (result.sheets || []).reduce((s, x) => s + x.sheet.width * x.sheet.length, 0);
+  const used = (result.sheets || []).reduce((s, x) => s + x.placements.reduce((a, p) => a + p.block.area, 0), 0);
+  return { used, total, ratio: total ? used / total : 0 };
+}
+
 export function renderOrder(result, units) {
   if (!result.sheets.length) return '<p class="muted">No sheets needed yet.</p>';
   const counts = new Map();
@@ -361,11 +375,7 @@ export function renderOrder(result, units) {
     )
     .join('');
   const total = [...counts.values()].reduce((s, c) => s + (c.sheet.price || 0) * c.qty, 0);
-  const sheetArea = result.sheets.reduce((s, x) => s + x.sheet.width * x.sheet.length, 0);
-  const usedArea = result.sheets.reduce(
-    (s, x) => s + x.placements.reduce((a, p) => a + p.block.area, 0),
-    0
-  );
+  const { used: usedArea, total: sheetArea } = usage(result);
   return `<table class="order">
     <thead><tr><th>Sheet</th><th>Size (${esc(units)})</th><th class="num">Qty</th><th class="num">Cost</th></tr></thead>
     <tbody>${rows}</tbody>
