@@ -92,9 +92,21 @@ function renderSummary(pieces, result, problems, units) {
   }).join('');
   const total = drawable.reduce((s, p) => s + area(p.vertices), 0);
 
+  // The price of the plan on the screen, which is not always the quick nester's
+  // — pick another from the list and this follows it, because everything here is
+  // drawn from the same result.
+  const sheets = result.sheets || [];
+  const priced = sheets.length && sheets.every((s) => s.sheet.price != null);
+  const order = sheets.length
+    ? `<li class="grand"><span>order</span>
+        <b>${priced ? '&pound;' + result.cost.toFixed(2) : '&mdash;'}</b>
+        <span class="muted">${sheets.length} sheet${sheets.length === 1 ? '' : 's'}</span></li>`
+    : '';
+
   $('#summary').innerHTML = `<ul class="totals">${bySide}
     <li class="grand"><span>total glazed</span><b>${sqm(total, units)} m&sup2;</b>
-      <span class="muted">${drawable.length}/${pieces.length} measured</span></li></ul>`;
+      <span class="muted">${drawable.length}/${pieces.length} measured</span></li>
+    ${order}</ul>`;
 
   const oversize = (result.leftovers || []).flatMap((b) => b.placements.map((p) => p.piece.id));
   const fitted = pieces.filter((p) => p.fitted);
@@ -320,6 +332,19 @@ function materials(result, data) {
 }
 
 /**
+ * The drawings and the bill, side by side.
+ *
+ * The sheets wrap into as many columns as the window gives them, so left to
+ * itself the order list ends up below the last one — past the fold on any plan
+ * worth reading. It gets a column of its own instead, and the drawings wrap
+ * inside theirs. On a narrow screen the column falls back under them.
+ */
+function planBody(result, data) {
+  const bill = materials(result, data);
+  return `<div class="plan-body"><div class="sheets">${renderCutPlan(result, data)}</div>${bill}</div>`;
+}
+
+/**
  * What a plan was made from, so an edit retires it.
  *
  * The sheets are in it as well as the pieces: untick a size, or change a price,
@@ -354,7 +379,7 @@ function draw() {
   $('#pieces').innerHTML = renderPieces(pieces, problems, data.units, state.showFitted);
   $('#roof').innerHTML = renderRoof(pieces, data.units, state.hiddenSides, state.flags);
   drawAsk(pieces, result);
-  $('#cutplan').innerHTML = planControls(fast, result) + renderCutPlan(result, data) + materials(result, data);
+  $('#cutplan').innerHTML = planControls(fast, result) + planBody(result, data);
   $('#sheets').innerHTML = renderSheets(state.store.sheets, data.units);
   $('#designs').innerHTML = renderDesigns(state.store.designs, state.store.current, data.units);
   renderSummary(pieces, result, problems, data.units);
@@ -804,7 +829,7 @@ function drawAsk(pieces, ours) {
       <button id="clearplan">Clear</button></div>
     ${verdict}${comparison}
   </section>
-  ${state.pasted && mine.sheets.length ? `<div class="sheets">${renderCutPlan(mine, data)}</div>${materials(mine, data)}` : ''}`;
+  ${state.pasted && mine.sheets.length ? planBody(mine, data) : ''}`;
 
   const copy = async (text, event) => {
     try {

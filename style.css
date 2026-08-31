@@ -154,6 +154,11 @@ table.order tfoot td { font-weight: 600; border-bottom: none; background: #faf9f
   main { padding: 0; }
   .panel { break-inside: auto; }
   figure.sheet, .piece-card, .materials { break-inside: avoid; }
+  /* On paper the bill belongs after the drawings, not in a column beside them:
+     a sticky sidebar has nothing to stick to and the page is narrower than the
+     screen it was laid out for. */
+  .plan-body { display: block; }
+  .plan-body > .materials { position: static; max-height: none; }
   .materials { margin-top: 18px; }
 }
 
@@ -379,14 +384,23 @@ button.danger:hover { background: #c0392b; color: #fff; }
   .pick { padding: 9px 12px; font-size: 14px; }
   .pick-actions button { padding: 10px 16px; font-size: 14px; }
 }
-/* The cut plan lays the sheets out with flex-wrap, so the picker and the
-   controls above them would otherwise sit alongside the first drawing. Each
-   takes a row of its own and the drawings start on the line below. */
-#cutplan > .sheet-picker,
-#cutplan > .plan-controls,
-#cutplan > .hint,
-#cutplan > table.offers,
-#cutplan > .materials,
+/* The drawings wrap inside their own column so the order list can hold the one
+   beside it. Below the width where both fit, the bill drops under the sheets. */
+.plan-body { display: flex; align-items: flex-start; gap: 20px; }
+.plan-body > .sheets { flex: 1 1 auto; min-width: 0; }
+.plan-body > .materials {
+  flex: 0 0 auto; position: sticky; top: 12px;
+  /* Its own scrollbar rather than the page's: a twenty-sheet order should not
+     make the drawings beside it scroll past. */
+  max-height: calc(100vh - 24px); overflow-y: auto;
+}
+.plan-body > .materials h2 { margin-top: 0; }
+@media (max-width: 1100px) {
+  .plan-body { flex-wrap: wrap; }
+  .plan-body > .materials { position: static; max-height: none; flex: 0 0 100%; }
+}
+/* The sheets wrap with flex, so a heading would otherwise sit alongside the
+   first drawing under it. */
 .sheets > .sheet-heading { flex: 0 0 100%; max-width: none; }
 
 
